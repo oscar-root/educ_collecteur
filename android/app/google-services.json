@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "55620656912",
+    "project_id": "educ-collecteur",
+    "storage_bucket": "educ-collecteur.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:55620656912:android:695062b7db85b0c5a34f95",
+        "android_client_info": {
+          "package_name": "com.example.educ_collecteur"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7oLlcsd7VR0sMd_KBsU_j_ekFQI1RmmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
