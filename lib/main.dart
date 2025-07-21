@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+
 import 'firebase_options.dart';
 import 'routes/app_routes.dart';
 import 'theme/app_theme.dart';
@@ -20,7 +21,7 @@ class MyApp extends StatelessWidget {
       title: 'EDUC Collecteur',
       theme: AppTheme.lightTheme,
       initialRoute: '/',
-      routes: AppRoutes.routes,
+      routes: AppRoutes.routes, // Tout est maintenant correct ici
     );
   }
 }
