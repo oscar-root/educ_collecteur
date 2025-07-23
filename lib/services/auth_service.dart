@@ -9,7 +9,6 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // 🔐 Connexion
   Future<User?> signIn(String email, String password) async {
     final result = await _auth.signInWithEmailAndPassword(
       email: email,
@@ -18,7 +17,6 @@ class AuthService {
     return result.user;
   }
 
-  // 🆕 Inscription simple
   Future<User?> signUp(String email, String password, String role) async {
     final result = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -35,7 +33,6 @@ class AuthService {
     return user;
   }
 
-  // 🆕✅ Inscription étendue avec informations supplémentaires
   Future<User?> signUpExtended({
     required String email,
     required String password,
@@ -75,7 +72,6 @@ class AuthService {
     return user;
   }
 
-  // 📥 Obtenir l'utilisateur connecté
   Future<UserModel?> getCurrentUserModel() async {
     final user = _auth.currentUser;
     if (user != null) {
@@ -87,12 +83,10 @@ class AuthService {
     return null;
   }
 
-  // 🔓 Déconnexion
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  // 📤 Réinitialisation mot de passe
   Future<void> resetPassword(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }

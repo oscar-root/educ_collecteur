@@ -104,6 +104,7 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
                 const SizedBox(height: 24),
 
+                // Avatar de profil
                 GestureDetector(
                   onTap: _pickImage,
                   child: CircleAvatar(
