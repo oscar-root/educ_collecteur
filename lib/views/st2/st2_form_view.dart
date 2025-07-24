@@ -38,6 +38,20 @@ class _ST2FormViewState extends State<ST2FormView> {
 
   // Pour les enseignants
   List<Map<String, TextEditingController>> enseignants = [];
+  // Page 4 - Manuels scolaires
+  Map<String, Map<String, TextEditingController>> manuelsParAnnee = {
+    'Français': {},
+    'Mathématiques': {},
+    'Eveil': {},
+    'ECM': {},
+    'Transversaux': {},
+    'Autres': {},
+  };
+
+  // Page 4 - Équipements
+  Map<String, TextEditingController> bonsEtats = {};
+  Map<String, TextEditingController> mauvaisEtats = {};
+
   @override
   void initState() {
     super.initState();
@@ -65,6 +79,36 @@ class _ST2FormViewState extends State<ST2FormView> {
         setState(() {});
       }
     });
+    final annees = ['1ère', '2ème', '3ème', '4ème', '5ème', '6ème'];
+    final matieres = [
+      'Français',
+      'Mathématiques',
+      'Eveil',
+      'ECM',
+      'Transversaux',
+      'Autres',
+    ];
+
+    for (final matiere in matieres) {
+      for (final annee in annees) {
+        manuelsParAnnee[matiere]![annee] = TextEditingController();
+      }
+    }
+
+    final equipements = [
+      'Tableaux',
+      'Tables',
+      'Chaises',
+      'Ordinateurs',
+      'Photocopieuses',
+      'Kits scientifiques',
+      'Équipements spécifiques',
+    ];
+
+    for (final eq in equipements) {
+      bonsEtats[eq] = TextEditingController();
+      mauvaisEtats[eq] = TextEditingController();
+    }
   }
 
   // Dropdown values
@@ -166,6 +210,19 @@ class _ST2FormViewState extends State<ST2FormView> {
     for (final e in enseignants) {
       for (final c in e.values) c.dispose();
     }
+    for (final m in manuelsParAnnee.values) {
+      for (final c in m.values) {
+        c.dispose();
+      }
+    }
+
+    for (final c in bonsEtats.values) {
+      c.dispose();
+    }
+    for (final c in mauvaisEtats.values) {
+      c.dispose();
+    }
+
     super.dispose();
   }
 
@@ -614,8 +671,142 @@ class _ST2FormViewState extends State<ST2FormView> {
               ),
             ),
 
-            const Center(
-              child: Text("Page 4 : INFRASTRUCTURES (à implémenter)"),
+            // PAGE 4
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Nombre de manuels disponibles utilisables par année d’études",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+
+                  ...manuelsParAnnee.entries.map((entry) {
+                    final matiere = entry.key;
+                    final controllers = entry.value;
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 10),
+                        Text(
+                          matiere,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Row(
+                          children:
+                              [
+                                '1ère',
+                                '2ème',
+                                '3ème',
+                                '4ème',
+                                '5ème',
+                                '6ème',
+                              ].map((annee) {
+                                return Expanded(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4.0),
+                                    child: TextField(
+                                      controller: controllers[annee],
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        hintText: annee,
+                                        border: const UnderlineInputBorder(),
+                                      ),
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                        ),
+                      ],
+                    );
+                  }),
+
+                  const SizedBox(height: 20),
+                  Text(
+                    "TOTAL MANUELS : ${_calculerTotalManuels()}",
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+
+                  const Divider(height: 40),
+
+                  const Text(
+                    "NOMBRE D’ÉQUIPEMENTS EXISTANTS",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+
+                  ...bonsEtats.keys.map((equipement) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          equipement,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: bonsEtats[equipement],
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: "Bon état",
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: TextField(
+                                controller: mauvaisEtats[equipement],
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                  labelText: "Mauvais état",
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }),
+
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          "TOTAL bon état : ${_calculerTotalEquipement(bonsEtats)}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          "TOTAL mauvais état : ${_calculerTotalEquipement(mauvaisEtats)}",
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -697,6 +888,20 @@ class _ST2FormViewState extends State<ST2FormView> {
         ),
       );
     }).toList();
+  }
+
+  int _calculerTotalManuels() {
+    int total = 0;
+    for (final matiere in manuelsParAnnee.values) {
+      for (final c in matiere.values) {
+        total += int.tryParse(c.text) ?? 0;
+      }
+    }
+    return total;
+  }
+
+  int _calculerTotalEquipement(Map<String, TextEditingController> map) {
+    return map.values.fold(0, (sum, c) => sum + (int.tryParse(c.text) ?? 0));
   }
 
   // 👉 Fonction pour construire les inputs des effectifs garçons/filles
