@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class ST2FormView extends StatefulWidget {
   const ST2FormView({super.key});
@@ -23,6 +24,48 @@ class _ST2FormViewState extends State<ST2FormView> {
   final _provinceEducController = TextEditingController();
   final _refJuridiqueController = TextEditingController();
   final _matriculeSecopeController = TextEditingController();
+  String? niveauEcole;
+
+  final TextEditingController _nbEnseignantsTotal = TextEditingController();
+
+  // Pour classes autorisées et organisées
+  Map<String, TextEditingController> classesAutorisees = {};
+  Map<String, TextEditingController> classesOrganisees = {};
+
+  // Pour effectifs garçons et filles
+  Map<String, TextEditingController> effectifGarcons = {};
+  Map<String, TextEditingController> effectifFilles = {};
+
+  // Pour les enseignants
+  List<Map<String, TextEditingController>> enseignants = [];
+  @override
+  void initState() {
+    super.initState();
+
+    // Mise à jour automatique des enseignants selon le total renseigné
+    _nbEnseignantsTotal.addListener(() {
+      final total = int.tryParse(_nbEnseignantsTotal.text) ?? 0;
+
+      // On recrée les lignes du tableau enseignant
+      if (enseignants.length != total) {
+        enseignants = List.generate(
+          total,
+          (_) => {
+            'nom': TextEditingController(),
+            'sexe': TextEditingController(),
+            'age': TextEditingController(),
+            'matricule': TextEditingController(),
+            'salaire': TextEditingController(),
+            'annee': TextEditingController(),
+            'qualification': TextEditingController(),
+          },
+        );
+
+        // Rafraîchir l'UI
+        setState(() {});
+      }
+    });
+  }
 
   // Dropdown values
   String? _periode;
@@ -31,36 +74,10 @@ class _ST2FormViewState extends State<ST2FormView> {
   String? _regime;
   String? _mecanisation;
   String? _occupation;
+  String? _provinceEduc;
 
   final _periodes = ['SEMESTRE 1', 'SEMESTRE 2'];
-  final _provinces = [
-    'Kinshasa',
-    'Haut-Katanga',
-    'Haut-Lomami',
-    'Lomami',
-    'Lualaba',
-    'Tanganyika',
-    'Kasaï',
-    'Kasaï-Central',
-    'Kasaï-Oriental',
-    'Sankuru',
-    'Maniema',
-    'Sud-Kivu',
-    'Nord-Kivu',
-    'Ituri',
-    'Tshopo',
-    'Bas-Uele',
-    'Haut-Uele',
-    'Tshuapa',
-    'Mongala',
-    'Nord-Ubangi',
-    'Sud-Ubangi',
-    'Équateur',
-    'Maï-Ndombe',
-    'Kwilu',
-    'Kwango',
-    'Kongo-Central',
-  ];
+  final _provinces = ['Haut-Lomami'];
   final _sousDivisions = [
     'Kamina 1',
     'Kamina 2',
@@ -86,6 +103,7 @@ class _ST2FormViewState extends State<ST2FormView> {
     'Privée (EPR)',
     'Autres',
   ];
+  final _pronvinceEduc = ['Haut-Lomami 1'];
   final _mecanisations = ['Mécanisé et payé', 'Mécanisé et non payé'];
   final _occupations = ['Propriétaire', 'Co-propriétaire', 'Locataire'];
 
@@ -139,6 +157,15 @@ class _ST2FormViewState extends State<ST2FormView> {
     _nbEnsFormesController.dispose();
     _nbEnsPositifsController.dispose();
     _nbEnsInspectesController.dispose();
+
+    _nbEnseignantsTotal.dispose();
+    for (final c in classesAutorisees.values) c.dispose();
+    for (final c in classesOrganisees.values) c.dispose();
+    for (final c in effectifGarcons.values) c.dispose();
+    for (final c in effectifFilles.values) c.dispose();
+    for (final e in enseignants) {
+      for (final c in e.values) c.dispose();
+    }
     super.dispose();
   }
 
@@ -166,7 +193,6 @@ class _ST2FormViewState extends State<ST2FormView> {
 
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
-      // Envoyer les données
       print("✅ Formulaire ST2 soumis avec succès !");
     }
   }
@@ -192,11 +218,15 @@ class _ST2FormViewState extends State<ST2FormView> {
       child: TextFormField(
         controller: controller,
         keyboardType: type,
+        inputFormatters:
+            type == TextInputType.number
+                ? [FilteringTextInputFormatter.digitsOnly]
+                : null,
         decoration: _inputDecoration(label),
         style: const TextStyle(fontSize: 13),
         validator: (value) {
           if (value == null || value.isEmpty) return 'Champ requis';
-          if (type == TextInputType.number && double.tryParse(value) == null) {
+          if (type == TextInputType.number && int.tryParse(value) == null) {
             return 'Nombre invalide';
           }
           return null;
@@ -288,7 +318,7 @@ class _ST2FormViewState extends State<ST2FormView> {
                   ),
                   _buildTextField(
                     _villeController,
-                    "Ville",
+                    "Ville ou village",
                     TextInputType.text,
                   ),
                   _buildTextField(
@@ -296,15 +326,12 @@ class _ST2FormViewState extends State<ST2FormView> {
                     "Territoire ou commune",
                     TextInputType.text,
                   ),
-                  _buildTextField(
-                    _villageController,
-                    "Village",
-                    TextInputType.text,
-                  ),
-                  _buildTextField(
-                    _provinceEducController,
-                    "Province éducationnelle",
-                    TextInputType.text,
+
+                  _buildDropdown(
+                    "Province Educationnelle",
+                    _provinceEduc,
+                    _pronvinceEduc,
+                    (val) => setState(() => _provinceEduc = val),
                   ),
                   _buildDropdown(
                     "Sous-division",
@@ -318,11 +345,7 @@ class _ST2FormViewState extends State<ST2FormView> {
                     _regimes,
                     (val) => setState(() => _regime = val),
                   ),
-                  _buildTextField(
-                    _refJuridiqueController,
-                    "Réf. juridique (arrêté)",
-                    TextInputType.text,
-                  ),
+
                   _buildTextField(
                     _matriculeSecopeController,
                     "N° Matricule SECOPE",
@@ -393,17 +416,7 @@ class _ST2FormViewState extends State<ST2FormView> {
                       TextInputType.number,
                     ),
                   ],
-                  _buildCheckbox(
-                    "Les locaux sont-ils utilisés par un 2ème établissement ?",
-                    sharedLocaux,
-                    (val) => setState(() => sharedLocaux = val!),
-                  ),
-                  if (sharedLocaux)
-                    _buildTextField(
-                      _nomSecondEtsController,
-                      "Nom du 2ème établissement",
-                      TextInputType.text,
-                    ),
+
                   _buildCheckbox(
                     "Dispose-t-il d’un point d’eau ?",
                     hasEau,
@@ -465,43 +478,7 @@ class _ST2FormViewState extends State<ST2FormView> {
                       TextInputType.number,
                     ),
                   ],
-                  _buildCheckbox(
-                    "Dispose-t-il d’une cour de récréation ?",
-                    hasCour,
-                    (val) => setState(() => hasCour = val!),
-                  ),
-                  _buildCheckbox(
-                    "Dispose-t-il d’un terrain de sport ?",
-                    hasTerrain,
-                    (val) => setState(() => hasTerrain = val!),
-                  ),
-                  _buildCheckbox(
-                    "Dispose-t-il d’une clôture ?",
-                    hasCloture,
-                    (val) => setState(() => hasCloture = val!),
-                  ),
-                  if (hasCloture) ...[
-                    _buildCheckbox(
-                      "En dur",
-                      enDur,
-                      (val) => setState(() => enDur = val!),
-                    ),
-                    _buildCheckbox(
-                      "En semi dur",
-                      semiDur,
-                      (val) => setState(() => semiDur = val!),
-                    ),
-                    _buildCheckbox(
-                      "En haie",
-                      haie,
-                      (val) => setState(() => haie = val!),
-                    ),
-                    _buildCheckbox(
-                      "Autres",
-                      autreCloture,
-                      (val) => setState(() => autreCloture = val!),
-                    ),
-                  ],
+
                   _buildCheckbox(
                     "Dispose-t-il de prévisions budgétaires ?",
                     hasBudget,
@@ -538,13 +515,105 @@ class _ST2FormViewState extends State<ST2FormView> {
                 ],
               ),
             ),
+            // page 3
+            SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildDropdown(
+                    "Niveau de l'école",
+                    niveauEcole,
+                    ['MATERNEL', 'PRIMAIRE', 'SECONDAIRE'],
+                    (val) => setState(() {
+                      niveauEcole = val;
+                      classesAutorisees.clear();
+                      classesOrganisees.clear();
+                      effectifGarcons.clear();
+                      effectifFilles.clear();
+                    }),
+                  ),
+                  const SizedBox(height: 10),
 
-            // PAGE 3 - vide
-            const Center(
-              child: Text("Page 3 : DONNÉES PÉDAGOGIQUES (à implémenter)"),
+                  if (niveauEcole != null) ...[
+                    const Text(
+                      "NOMBRE DE CLASSES AUTORISÉES ET ORGANISÉES",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ..._buildClassesInputs(niveauEcole!),
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      "NOMBRE TOTAL D’ENSEIGNANTS",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    _buildTextField(
+                      _nbEnseignantsTotal,
+                      "Nombre total d’enseignants",
+                      TextInputType.number,
+                    ),
+                    const SizedBox(height: 20),
+
+                    if (enseignants.isNotEmpty) ...[
+                      const Text(
+                        "INFORMATIONS RELATIVES AU PERSONNEL ENSEIGNANT",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      for (int i = 0; i < enseignants.length; i++)
+                        Column(
+                          children: [
+                            _buildTextField(
+                              enseignants[i]['nom']!,
+                              "Nom enseignant n°${i + 1}",
+                              TextInputType.text,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['sexe']!,
+                              "Sexe (H/F)",
+                              TextInputType.text,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['age']!,
+                              "Âge",
+                              TextInputType.number,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['matricule']!,
+                              "N° Matricule (SECOPE)",
+                              TextInputType.text,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['salaire']!,
+                              "Situation salariale (Payé/Non Payé)",
+                              TextInputType.text,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['annee']!,
+                              "Année d'engagement",
+                              TextInputType.number,
+                            ),
+                            _buildTextField(
+                              enseignants[i]['qualification']!,
+                              "Qualification",
+                              TextInputType.text,
+                            ),
+                            const Divider(),
+                          ],
+                        ),
+                    ],
+
+                    const Text(
+                      "EFFECTIFS DES ÉLÈVES INSCRITS PAR SEXE ET ANNÉE D’ÉTUDES",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ..._buildEffectifInputs(niveauEcole!),
+                  ],
+                ],
+              ),
             ),
 
-            // PAGE 4 - vide
             const Center(
               child: Text("Page 4 : INFRASTRUCTURES (à implémenter)"),
             ),
@@ -584,5 +653,105 @@ class _ST2FormViewState extends State<ST2FormView> {
         ),
       ),
     );
+  }
+
+  // 👉 Fonction pour la somme automatique
+  int _somme(Map<String, TextEditingController> map) {
+    return map.values
+        .map((c) => int.tryParse(c.text) ?? 0)
+        .fold(0, (a, b) => a + b);
+  }
+
+  // 👉 Fonction pour construire les inputs des classes autorisées/organisées
+  List<Widget> _buildClassesInputs(String niveau) {
+    final niveaux =
+        {
+          'MATERNEL': ['1ère année', '2ème année', '3ème année'],
+          'PRIMAIRE': ['1ère', '2ème', '3ème', '4ème', '5ème', '6ème'],
+          'SECONDAIRE': ['7ème', '8ème', '1ère', '2ème', '3ème', '4ème'],
+        }[niveau]!;
+
+    return niveaux.map((niv) {
+      classesAutorisees[niv] ??= TextEditingController();
+      classesOrganisees[niv] ??= TextEditingController();
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildTextField(
+                classesAutorisees[niv]!,
+                "$niv - Autorisées",
+                TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildTextField(
+                classesOrganisees[niv]!,
+                "$niv - Organisées",
+                TextInputType.number,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  // 👉 Fonction pour construire les inputs des effectifs garçons/filles
+  List<Widget> _buildEffectifInputs(String niveau) {
+    final classes =
+        {
+          'MATERNEL': ['1ère', '2ème', '3ème'],
+          'PRIMAIRE': ['1ère', '2ème', '3ème', '4ème', '5ème', '6ème'],
+          'SECONDAIRE': ['1ère', '2ème', '3ème', '4ème', '5ème', '6ème'],
+        }[niveau]!;
+
+    return [
+      ...classes.map((c) {
+        effectifGarcons[c] ??= TextEditingController();
+        effectifFilles[c] ??= TextEditingController();
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildTextField(
+                  effectifGarcons[c]!,
+                  "$c - Garçons",
+                  TextInputType.number,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildTextField(
+                  effectifFilles[c]!,
+                  "$c - Filles",
+                  TextInputType.number,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              "Total garçons: ${_somme(effectifGarcons)}",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              "Total filles: ${_somme(effectifFilles)}",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    ];
   }
 }
