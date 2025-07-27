@@ -5,6 +5,7 @@ import '../models/user_model.dart';
 class AuthController {
   final AuthService _authService = AuthService();
 
+  /// Connexion utilisateur
   Future<UserModel?> login(String email, String password) async {
     final user = await _authService.signIn(email, password);
     if (user != null) {
@@ -13,6 +14,7 @@ class AuthController {
     return null;
   }
 
+  /// Enregistrement simple
   Future<UserModel?> register(
     String email,
     String password,
@@ -25,20 +27,27 @@ class AuthController {
     return null;
   }
 
+  /// Enregistrement complet avec données supplémentaires
   Future<UserModel?> registerExtended({
     required String email,
     required String password,
     required String fullName,
+    required String phone,
     required String schoolName,
+    required String codeEcole,
+    required String niveauEcole,
     required String gender,
     required String role,
-    required File? photo,
+    File? photo,
   }) async {
     final user = await _authService.signUpExtended(
       email: email,
       password: password,
       fullName: fullName,
+      phone: phone,
       schoolName: schoolName,
+      codeEcole: codeEcole,
+      niveauEcole: niveauEcole,
       gender: gender,
       role: role,
       photo: photo,
@@ -49,10 +58,12 @@ class AuthController {
     return null;
   }
 
+  /// Réinitialisation du mot de passe
   Future<void> resetPassword(String email) async {
     await _authService.resetPassword(email);
   }
 
+  /// Déconnexion
   Future<void> logout() async {
     await _authService.signOut();
   }

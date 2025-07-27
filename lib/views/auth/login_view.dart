@@ -80,6 +80,9 @@ class _LoginViewState extends State<LoginView>
           case 'chef':
             Navigator.pushReplacementNamed(context, '/chef-dashboard');
             break;
+          case 'chef_service':
+            Navigator.pushReplacementNamed(context, '/admin-dashboard');
+            break;
           case 'directeur':
             Navigator.pushReplacementNamed(context, '/directeur-dashboard');
             break;

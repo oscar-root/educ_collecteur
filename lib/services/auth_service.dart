@@ -9,6 +9,7 @@ class AuthService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
+  /// Connexion
   Future<User?> signIn(String email, String password) async {
     final result = await _auth.signInWithEmailAndPassword(
       email: email,
@@ -17,6 +18,7 @@ class AuthService {
     return result.user;
   }
 
+  /// Enregistrement basique
   Future<User?> signUp(String email, String password, String role) async {
     final result = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -28,16 +30,21 @@ class AuthService {
         'uid': user.uid,
         'email': email,
         'role': role,
+        'createdAt': FieldValue.serverTimestamp(),
       });
     }
     return user;
   }
 
+  /// Enregistrement complet avec photo, téléphone, école, etc.
   Future<User?> signUpExtended({
     required String email,
     required String password,
     required String fullName,
+    required String phone,
     required String schoolName,
+    required String codeEcole,
+    required String niveauEcole,
     required String gender,
     required String role,
     File? photo,
@@ -51,7 +58,6 @@ class AuthService {
     if (user == null) return null;
 
     String photoUrl = '';
-
     if (photo != null) {
       final ref = _storage.ref().child('profile_photos/${user.uid}.jpg');
       await ref.putFile(photo);
@@ -62,7 +68,10 @@ class AuthService {
       'uid': user.uid,
       'email': email,
       'fullName': fullName,
+      'phone': phone,
       'schoolName': schoolName,
+      'codeEcole': codeEcole,
+      'niveauEcole': niveauEcole,
       'gender': gender,
       'role': role,
       'photoUrl': photoUrl,
@@ -72,6 +81,7 @@ class AuthService {
     return user;
   }
 
+  /// Récupérer l'utilisateur actuel avec ses données
   Future<UserModel?> getCurrentUserModel() async {
     final user = _auth.currentUser;
     if (user != null) {
@@ -83,10 +93,12 @@ class AuthService {
     return null;
   }
 
+  /// Déconnexion
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
+  /// Réinitialisation du mot de passe
   Future<void> resetPassword(String email) async {
     await _auth.sendPasswordResetEmail(email: email);
   }

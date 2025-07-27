@@ -1,8 +1,13 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:educ_collecteur/views/st2/st2_form_view.dart';
+import '../auth/login_view.dart';
+import '../st2/pages/st2_form_page1.dart';
+import '../st2/pages/st2_form_page2.dart';
+import '../st2/pages/st2_form_page3.dart';
+import '../st2/pages/st2_form_page4.dart';
+import '../st2/st2_list_view.dart';
 
 class ChefDashboardView extends StatefulWidget {
   const ChefDashboardView({super.key});
@@ -12,281 +17,283 @@ class ChefDashboardView extends StatefulWidget {
 }
 
 class _ChefDashboardViewState extends State<ChefDashboardView> {
-  User? _firebaseUser;
-  String? _fullName;
-  String? _email;
-  String? _schoolName;
-  String? _profileUrl;
-  bool _isLoading = true;
-  bool _showForm = false;
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _selectedIndex = 0;
+  bool _isDarkMode = false;
+
+  String fullName = "Chargement...";
+  String email = "";
+  String photoUrl = "";
+  String niveauEcole = "secondaire";
 
   @override
   void initState() {
     super.initState();
-    _firebaseUser = FirebaseAuth.instance.currentUser;
-    _loadUserData();
+    _loadUserInfo();
   }
 
-  Future<void> _loadUserData() async {
-    if (_firebaseUser == null) return;
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(_firebaseUser!.uid)
-            .get();
-
-    if (doc.exists) {
+  Future<void> _loadUserInfo() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
       final data = doc.data();
-      setState(() {
-        _fullName = data?['fullName'] ?? '';
-        _email = data?['email'] ?? _firebaseUser!.email;
-        _schoolName = data?['schoolName'] ?? '';
-        _profileUrl = data?['photoUrl']; // ✅ Utilise la bonne clé Firestore
-        _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _fullName = '';
-        _email = _firebaseUser!.email;
-        _schoolName = '';
-        _isLoading = false;
-      });
+      if (data != null) {
+        setState(() {
+          fullName = data['fullName'] ?? 'Chef';
+          email = data['email'] ?? '';
+          photoUrl = data['photoUrl'] ?? '';
+          niveauEcole = data['niveauEcole'] ?? 'secondaire';
+        });
+      }
     }
   }
 
   void _logout() async {
     await FirebaseAuth.instance.signOut();
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginView()),
+      );
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      drawer: _buildDrawer(),
-      appBar: AppBar(
-        backgroundColor: Colors.indigo,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-        ),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundImage:
-                  _profileUrl != null && _profileUrl!.isNotEmpty
-                      ? NetworkImage(_profileUrl!)
-                      : const AssetImage('assets/images/default_avatar.png')
-                          as ImageProvider,
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Tableau de bord – Chef d’établissement',
-                style: TextStyle(fontSize: 18),
-              ),
-            ),
-          ],
-        ),
-        actions:
-            _showForm
-                ? [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    tooltip: 'Fermer le formulaire',
-                    onPressed: () {
-                      setState(() => _showForm = false);
-                    },
-                  ),
-                ]
-                : null,
-      ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _showForm
-              ? const ST2FormView()
-              : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
-                      color: Colors.indigo[50],
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _fullName ?? '',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          if ((_schoolName ?? '').isNotEmpty)
-                            Text(
-                              _schoolName!,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+  void _startST2Form() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (_) => ST2FormPage1(
+              onSave: (page1Data) {
+                // Tu peux ici stocker les données
+              },
+              onNext: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder:
+                        (_) => ST2FormPage2(
+                          onSave: (page2Data) {},
+                          onPrevious: () => Navigator.pop(context),
+                          onNext: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => ST2FormPage3(
+                                      niveauEcole: niveauEcole,
+                                      onSave: (page3Data) {},
+                                      onPrevious: () => Navigator.pop(context),
+                                      onNext: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) => ST2FormPage4(
+                                                  niveauEcole: niveauEcole,
+                                                  onSave: (page4Data) {
+                                                    // ici tu peux combiner toutes les données
+                                                  },
+                                                  onPrevious:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                      ),
+                                                  onSubmit: () {
+                                                    Navigator.popUntil(
+                                                      context,
+                                                      (route) => route.isFirst,
+                                                    );
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                          "✅ Formulaire soumis avec succès !",
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                               ),
-                            ),
-                          if (_email != null)
-                            Text(
-                              _email!,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Color(0xFF1A73E8),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildEducationCarousel(),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-      bottomNavigationBar:
-          _showForm
-              ? null
-              : BottomAppBar(
-                shape: const CircularNotchedRectangle(),
-                notchMargin: 8,
-                elevation: 10,
-                color: Colors.white,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      FloatingActionButton.extended(
-                        heroTag: "remplir",
-                        backgroundColor: Colors.green,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Remplir ST2'),
-                        onPressed: () {
-                          setState(() {
-                            _showForm = true;
-                          });
-                        },
-                      ),
-                      FloatingActionButton.extended(
-                        heroTag: "consulter",
-                        backgroundColor: Colors.blue,
-                        icon: const Icon(Icons.folder_open),
-                        label: const Text('Consulter ST2'),
-                        onPressed:
-                            () => Navigator.pushNamed(context, '/st2-list'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-    );
-  }
-
-  Widget _buildEducationCarousel() {
-    final List<String> quotes = [
-      "« L’éducation est l’arme la plus puissante pour changer le monde. » – Nelson Mandela",
-      "« Chaque enfant mérite une chance d’apprendre et de réussir. »",
-      "« L’école est la fondation du progrès d’une nation. »",
-      "« Investir dans l’éducation, c’est investir dans l’avenir. »",
-    ];
-
-    return CarouselSlider(
-      options: CarouselOptions(
-        height: 180,
-        autoPlay: true,
-        enlargeCenterPage: true,
-        autoPlayInterval: const Duration(seconds: 5),
-        viewportFraction: 0.9,
-      ),
-      items:
-          quotes.map((text) {
-            return Builder(
-              builder: (BuildContext context) {
-                return Container(
-                  width: MediaQuery.of(context).size.width * 0.85,
-                  margin: const EdgeInsets.symmetric(horizontal: 8.0),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.indigo.shade400, Colors.indigo.shade800],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  child: Center(
-                    child: Text(
-                      text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                        height: 1.5,
-                      ),
-                    ),
+                            );
+                          },
+                        ),
                   ),
                 );
               },
-            );
-          }).toList(),
+            ),
+      ),
     );
   }
 
-  Widget _buildDrawer() {
+  final List<Widget> _pages = [_AccueilPage(), ST2ListView()];
+
+  @override
+  Widget build(BuildContext context) {
+    return Theme(
+      data: _isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      child: Scaffold(
+        drawer: _buildSidebar(),
+        appBar: AppBar(
+          title: const Text('Dashboard – Chef d’établissement'),
+          backgroundColor: Colors.indigo,
+        ),
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          selectedItemColor: Colors.indigo,
+          onTap: (index) => setState(() => _selectedIndex = index),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              label: 'Accueil',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.list_alt),
+              label: 'Consulter ST2',
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _startST2Form,
+          icon: const Icon(Icons.edit_document),
+          label: const Text("Remplir ST2"),
+        ),
+      ),
+    );
+  }
+
+  Drawer _buildSidebar() {
     return Drawer(
-      child: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
         children: [
           UserAccountsDrawerHeader(
-            accountName: Text(_fullName ?? ''),
-            accountEmail: Text(_email ?? ''),
+            accountName: Text(fullName),
+            accountEmail: Text(email),
             currentAccountPicture: CircleAvatar(
               backgroundImage:
-                  _profileUrl != null && _profileUrl!.isNotEmpty
-                      ? NetworkImage(_profileUrl!)
+                  photoUrl.isNotEmpty
+                      ? NetworkImage(photoUrl)
                       : const AssetImage('assets/images/default_avatar.png')
                           as ImageProvider,
             ),
             decoration: const BoxDecoration(color: Colors.indigo),
           ),
           ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Paramètres'),
+            leading: const Icon(Icons.edit_document),
+            title: const Text('Remplir ST2'),
             onTap: () {
               Navigator.pop(context);
+              _startST2Form();
             },
           ),
           ListTile(
-            leading: const Icon(Icons.logout),
-            title: const Text('Se déconnecter'),
+            leading: const Icon(Icons.list_alt),
+            title: const Text('Consulter ST2'),
             onTap: () {
+              setState(() => _selectedIndex = 1);
               Navigator.pop(context);
-              _logout();
             },
           ),
+          ExpansionTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Paramètres'),
+            children: [
+              SwitchListTile(
+                title: const Text('Dark Mode'),
+                value: _isDarkMode,
+                onChanged: (val) => setState(() => _isDarkMode = val),
+              ),
+            ],
+          ),
+          const Spacer(),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text(
+              'Se déconnecter',
+              style: TextStyle(color: Colors.red),
+            ),
+            onTap: _logout,
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _AccueilPage extends StatelessWidget {
+  const _AccueilPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      children: [
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Text(
+            "Votre session",
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 20),
+        CarouselSlider(
+          options: CarouselOptions(
+            height: 220,
+            autoPlay: true,
+            enlargeCenterPage: true,
+            aspectRatio: 16 / 9,
+            viewportFraction: 0.85,
+            autoPlayCurve: Curves.fastOutSlowIn,
+            autoPlayInterval: const Duration(seconds: 4),
+          ),
+          items: [
+            _carouselCard("Remplissez le ST2 facilement", Icons.edit_document),
+            _carouselCard(
+              "Consultez vos données à tout moment",
+              Icons.list_alt,
+            ),
+            _carouselCard("Protégez vos accès et données", Icons.security),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static Widget _carouselCard(String text, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Colors.indigo, Colors.lightBlueAccent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(3, 6)),
+        ],
+      ),
+      child: Center(
+        child: ListTile(
+          leading: Icon(icon, size: 36, color: Colors.white),
+          title: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
       ),
     );
   }
