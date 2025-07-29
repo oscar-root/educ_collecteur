@@ -1,44 +1,49 @@
-// lib/app_routes.dart
+// lib/routes/app_routes.dart
 
 import 'package:flutter/material.dart';
 
-// Imports des vues principales
+// --- Imports des Vues ---
 import '../views/auth/splash_screen.dart';
 import '../views/auth/login_view.dart';
 import '../views/auth/register_view.dart';
 import '../views/auth/reset_password_view.dart';
 
-// Imports des Dashboards pour chaque rôle
 import '../views/dashboard/admin_dashboard_view.dart';
 import '../views/dashboard/directeur_dashboard_view.dart';
-import '../views/dashboard/chef_dashboard_view.dart'; // L'import est correct
+import '../views/dashboard/chef_dashboard_view.dart';
+// --- L'IMPORT CORRESPOND MAINTENANT AU NOM DE VOTRE FICHIER ---
+import '../views/dashboard/chef_service_dashboard_view.dart';
 
-// Import de la page unique du formulaire ST2
 import '../views/st2/pages/st2_form_page.dart';
+import '../views/st2/st2_detail_view.dart';
+
+// --- Import du Modèle ---
+import '../models/st2_model.dart';
 
 class AppRoutes {
-  /// Map de toutes les routes nommées de l'application.
-  /// Une route nommée permet de naviguer vers un écran sans avoir à l'importer directement.
   static final Map<String, WidgetBuilder> routes = {
-    // --- Routes d'Authentification et de démarrage ---
+    // --- Routes d'Authentification ---
     '/': (context) => const SplashScreen(),
     '/login': (context) => const LoginView(),
     '/register': (context) => const RegisterView(),
     '/reset-password': (context) => const ResetPasswordView(),
 
-    // --- Routes des Dashboards par Rôle ---
-    '/admin-dashboard': (context) => const AdminDashboardView(),
-    '/directeur-dashboard': (context) => const DirecteurDashboardView(),
+    // --- Routes des Dashboards ---
+    '/admin_dashboard': (context) => const AdminDashboardView(),
+    '/directeur_dashboard': (context) => const DirecteurDashboardView(),
+    '/chef_dashboard': (context) => const ChefDashboardView(),
 
-    // CORRECTION : Utilisation du nom de widget correct 'ChefDashboardView'.
-    '/chef-dashboard': (context) => const ChefDashboardView(),
+    // --- CORRECTION FINALE ICI ---
+    // La clé de la route correspond à l'appel dans login_view.dart
+    // La valeur correspond maintenant au nom exact de votre classe.
+    '/chef_service_dashboard': (context) => const ChefServiceDashboardView(),
 
-    // --- Routes des formulaires et autres pages ---
-
-    // AJOUT : Une route propre et unique pour le formulaire ST2 complet.
+    // --- Autres Routes ---
     '/st2-form': (context) => const ST2FormPage(),
 
-    // SUPPRESSION : L'ancienne route '/form1' est retirée car elle est obsolète.
-    // Les routes pour form2, form3, etc., sont également inutiles.
+    '/st2_detail_view': (context) {
+      final form = ModalRoute.of(context)!.settings.arguments as ST2Model;
+      return ST2DetailView(form: form);
+    },
   };
 }

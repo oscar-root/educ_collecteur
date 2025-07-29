@@ -1,36 +1,32 @@
+// lib/st2/pages/st2_form_page.dart
+
 import 'package:animate_do/animate_do.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// Modèle pour structurer les données des enseignants, facilitant la gestion
-class TeacherData {
-  String nom;
+// --- CORRECTION DÉFINITIVE DES IMPORTS ---
+// Le répertoire '/lib/' est retiré.
+// Remplacez 'educ_collecteur' par le nom exact de votre projet (défini dans pubspec.yaml).
+import 'package:educ_collecteur/controllers/st2_controller.dart';
+import 'package:educ_collecteur/models/st2_model.dart';
+
+// Helper class pour les contrôleurs de la section Enseignants
+class _TeacherControllers {
+  final TextEditingController nom = TextEditingController();
+  final TextEditingController matricule = TextEditingController();
+  final TextEditingController anneeEngagement = TextEditingController();
   String? sexe;
-  String matricule;
   String? situationSalariale;
-  int? anneeEngagement;
   String? qualification;
 
-  TeacherData({
-    this.nom = '',
-    this.sexe,
-    this.matricule = '',
-    this.situationSalariale,
-    this.anneeEngagement,
-    this.qualification,
-  });
+  _TeacherControllers();
 
-  Map<String, dynamic> toMap() {
-    return {
-      'nom': nom,
-      'sexe': sexe,
-      'matricule': matricule,
-      'situationSalariale': situationSalariale,
-      'anneeEngagement': anneeEngagement,
-      'qualification': qualification,
-    };
+  void dispose() {
+    nom.dispose();
+    matricule.dispose();
+    anneeEngagement.dispose();
   }
 }
 
@@ -42,56 +38,104 @@ class ST2FormPage extends StatefulWidget {
 }
 
 class _ST2FormPageState extends State<ST2FormPage> {
-  final _formKey = GlobalKey<FormState>();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final ST2Controller _st2Controller = ST2Controller();
+
+  // Variables d'état
   bool _isLoading = true;
   bool _isSubmitting = false;
-
-  //=========== Contrôleurs pour tous les champs du formulaire ===========
-  // Utiliser des contrôleurs permet de lire/modifier les valeurs facilement
-
-  // Section: Identification
-  final _schoolNameController = TextEditingController();
-  final _fullNameController = TextEditingController();
-  final _adresseController = TextEditingController();
-  final _telephoneController = TextEditingController();
-  String? _selectedPeriode;
   String? _niveauEcole;
 
-  // Section: Localisation
+  // DÉCLARATION DE TOUS LES CONTRÔLEURS
+  final TextEditingController _schoolNameController = TextEditingController();
+  final TextEditingController _fullNameController = TextEditingController();
+  final TextEditingController _adresseController = TextEditingController();
+  final TextEditingController _telephoneController = TextEditingController();
+  String? _selectedPeriode;
+  final TextEditingController _villeVillageController = TextEditingController();
+  final TextEditingController _refJuridiqueController = TextEditingController();
+  final TextEditingController _idDinacopeController = TextEditingController();
   String? _selectedProvince = 'HAUT-LOMAMI';
   String? _selectedProvinceEdu = 'HAUT-LOMAMI 1';
-  final _villeVillageController = TextEditingController();
   String? _selectedSousDivision;
   String? _selectedRegimeGestion;
-  final _refJuridiqueController = TextEditingController();
-  final _idDinacopeController = TextEditingController();
   String? _selectedStatutEtablissement;
-
-  // Section: Informations Générales
   bool? _hasProgrammesOfficiels;
   bool? _hasLatrines;
-  final _latrinesTotalController = TextEditingController();
-  final _latrinesFillesController = TextEditingController();
+  final TextEditingController _latrinesTotalController =
+      TextEditingController();
+  final TextEditingController _latrinesFillesController =
+      TextEditingController();
   bool? _hasPrevisionsBudgetaires;
+  final TextEditingController _totalEnseignantsController =
+      TextEditingController();
+  List<_TeacherControllers> _teacherControllers = [];
+  Map<String, TextEditingController> _classesOrganiseesControllers = {};
+  Map<String, TextEditingController> _effectifsGarconsControllers = {};
+  Map<String, TextEditingController> _effectifsFillesControllers = {};
+  Map<String, Map<String, TextEditingController>> _manuelsControllers = {};
+  Map<String, TextEditingController> _equipementsBonEtatControllers = {};
+  Map<String, TextEditingController> _equipementsMauvaisEtatControllers = {};
 
-  // Section: Données scolaires (communes à tous les niveaux)
-  final _totalEnseignantsController = TextEditingController();
-  List<TeacherData> _teachers = [];
+  // NOTIFIERS POUR LES CALCULS EN TEMPS RÉEL
+  final ValueNotifier<int> _totalClassesOrganiseesNotifier = ValueNotifier(0);
+  final ValueNotifier<int> _totalElevesNotifier = ValueNotifier(0);
+  final Map<String, ValueNotifier<int>> _totalManuelsParClasseNotifier = {};
+  final ValueNotifier<int> _totalManuelsGeneralNotifier = ValueNotifier(0);
+  final ValueNotifier<int> _totalEquipementsBonEtatNotifier = ValueNotifier(0);
+  final ValueNotifier<int> _totalEquipementsMauvaisEtatNotifier = ValueNotifier(
+    0,
+  );
 
-  // ... (D'autres contrôleurs spécifiques aux niveaux seront initialisés plus tard)
+  // Listes pour les Dropdowns
+  final List<String> _sousDivisions = [
+    'Kamina 1',
+    'Kamina 2',
+    'Kamina 3',
+    'Kabongo 1',
+    'Kabongo 2',
+    'Kabongo 3',
+    'Kabongo 4',
+    'Kaniama 1',
+    'Kaniama 2',
+    'Kayamba 1',
+    'Kayamba 2',
+    'Kiondo-Kiambidi',
+  ];
+  final List<String> _regimesGestion = [
+    'ENC',
+    'Catholique',
+    'Protestant',
+    'ECK',
+    'ECI',
+    'Privée (EPR)',
+  ];
+  final List<String> _statutsEtablissement = [
+    'Mécanisé et payé',
+    'Mécanisé et non payé',
+  ];
+  final List<String> _qualificationsEnseignant = ['D4', 'D6', 'P6', 'Autres'];
+
+  // Listes spécifiques aux niveaux qui seront peuplées dans initState
+  List<String> _classesDuNiveau = [];
+  List<String> _manuelsDuNiveau = [];
+  final List<String> _equipements = [
+    'Tableaux',
+    'Tables',
+    'Chaises',
+    'Ordinateurs (à des fins pédagogiques)',
+    'Kits scientifiques',
+  ];
 
   @override
   void initState() {
     super.initState();
     _loadUserDataAndInitializeForm();
-
-    // Listener pour mettre à jour la liste des enseignants dynamiquement
     _totalEnseignantsController.addListener(_updateTeacherList);
   }
 
   @override
   void dispose() {
-    // Il est crucial de disposer les contrôleurs pour libérer la mémoire
     _schoolNameController.dispose();
     _fullNameController.dispose();
     _adresseController.dispose();
@@ -103,7 +147,39 @@ class _ST2FormPageState extends State<ST2FormPage> {
     _latrinesFillesController.dispose();
     _totalEnseignantsController.removeListener(_updateTeacherList);
     _totalEnseignantsController.dispose();
-    // ... disposez tous les autres contrôleurs ici
+
+    for (var controller in _teacherControllers) {
+      controller.dispose();
+    }
+    for (var controller in _classesOrganiseesControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _effectifsGarconsControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _effectifsFillesControllers.values) {
+      controller.dispose();
+    }
+    for (var map in _manuelsControllers.values) {
+      for (var controller in map.values) {
+        controller.dispose();
+      }
+    }
+    for (var controller in _equipementsBonEtatControllers.values) {
+      controller.dispose();
+    }
+    for (var controller in _equipementsMauvaisEtatControllers.values) {
+      controller.dispose();
+    }
+
+    _totalClassesOrganiseesNotifier.dispose();
+    _totalElevesNotifier.dispose();
+    for (var notifier in _totalManuelsParClasseNotifier.values) {
+      notifier.dispose();
+    }
+    _totalManuelsGeneralNotifier.dispose();
+    _totalEquipementsBonEtatNotifier.dispose();
+    _totalEquipementsMauvaisEtatNotifier.dispose();
     super.dispose();
   }
 
@@ -115,33 +191,146 @@ class _ST2FormPageState extends State<ST2FormPage> {
               .collection('users')
               .doc(user.uid)
               .get();
-      final data = doc.data();
-      if (data != null && mounted) {
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
         setState(() {
           _schoolNameController.text = data['schoolName'] ?? 'N/A';
           _fullNameController.text = data['fullName'] ?? 'N/A';
-          _niveauEcole = data['niveauEcole'] ?? 'secondaire';
+          _niveauEcole = data['niveauEcole']?.toString().toLowerCase();
+          if (_niveauEcole != null) {
+            _initializeFormForLevel(_niveauEcole!);
+          }
           _isLoading = false;
         });
+      } else {
+        if (mounted) setState(() => _isLoading = false);
       }
     } else {
-      // Gérer le cas où l'utilisateur n'est pas connecté
-      setState(() => _isLoading = false);
+      if (mounted) Navigator.of(context).pushReplacementNamed('/login');
     }
   }
 
+  void _initializeFormForLevel(String level) {
+    // Réinitialiser les listes et les contrôleurs
+    _classesDuNiveau.clear();
+    _manuelsDuNiveau.clear();
+    _classesOrganiseesControllers.values.forEach((c) => c.dispose());
+    _classesOrganiseesControllers.clear();
+    _effectifsGarconsControllers.values.forEach((c) => c.dispose());
+    _effectifsGarconsControllers.clear();
+    _effectifsFillesControllers.values.forEach((c) => c.dispose());
+    _effectifsFillesControllers.clear();
+    _manuelsControllers.values.forEach(
+      (map) => map.values.forEach((c) => c.dispose()),
+    );
+    _manuelsControllers.clear();
+    _equipementsBonEtatControllers.values.forEach((c) => c.dispose());
+    _equipementsBonEtatControllers.clear();
+    _equipementsMauvaisEtatControllers.values.forEach((c) => c.dispose());
+    _equipementsMauvaisEtatControllers.clear();
+
+    if (level == 'maternel') {
+      _classesDuNiveau = ['1ère', '2ème', '3ème'];
+      _manuelsDuNiveau = ['FRANÇAIS', 'HYGIENE', 'EVEIL', 'ECM', 'Autres'];
+    } else if (level == 'primaire') {
+      _classesDuNiveau = ['1ère', '2ème', '3ème', '4ème', '5ème', '6ème'];
+      _manuelsDuNiveau = [
+        'Français',
+        'Mathématiques',
+        'Eveil',
+        'ECM',
+        'Autres',
+      ];
+    } else if (level == 'secondaire') {
+      _classesDuNiveau = ['7ème', '8ème', '1ère', '2ème', '3ème', '4ème'];
+      _manuelsDuNiveau = [
+        'Français',
+        'Mathématiques',
+        'Eveil',
+        'ECM',
+        'Autres',
+      ];
+    }
+
+    // Créer les contrôleurs nécessaires
+    for (var classe in _classesDuNiveau) {
+      _classesOrganiseesControllers[classe] =
+          TextEditingController()..addListener(_calculateTotals);
+      _effectifsGarconsControllers[classe] =
+          TextEditingController()..addListener(_calculateTotals);
+      _effectifsFillesControllers[classe] =
+          TextEditingController()..addListener(_calculateTotals);
+      _totalManuelsParClasseNotifier[classe] = ValueNotifier(0);
+      _manuelsControllers[classe] = {};
+      for (var manuel in _manuelsDuNiveau) {
+        _manuelsControllers[classe]![manuel] =
+            TextEditingController()..addListener(_calculateTotals);
+      }
+    }
+    for (var equipement in _equipements) {
+      _equipementsBonEtatControllers[equipement] =
+          TextEditingController()..addListener(_calculateTotals);
+      _equipementsMauvaisEtatControllers[equipement] =
+          TextEditingController()..addListener(_calculateTotals);
+    }
+  }
+
+  void _calculateTotals() {
+    int totalClasses = _classesOrganiseesControllers.values.fold<int>(
+      0,
+      (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+    );
+    _totalClassesOrganiseesNotifier.value = totalClasses;
+
+    int totalGarcons = _effectifsGarconsControllers.values.fold<int>(
+      0,
+      (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+    );
+    int totalFilles = _effectifsFillesControllers.values.fold<int>(
+      0,
+      (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+    );
+    _totalElevesNotifier.value = totalGarcons + totalFilles;
+
+    int totalManuelsGeneral = 0;
+    _classesDuNiveau.forEach((classe) {
+      int totalParClasse =
+          _manuelsControllers[classe]?.values.fold<int>(
+            0,
+            (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+          ) ??
+          0;
+      if (_totalManuelsParClasseNotifier[classe] != null) {
+        _totalManuelsParClasseNotifier[classe]!.value = totalParClasse;
+      }
+      totalManuelsGeneral += totalParClasse;
+    });
+    _totalManuelsGeneralNotifier.value = totalManuelsGeneral;
+
+    int totalBonEtat = _equipementsBonEtatControllers.values.fold<int>(
+      0,
+      (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+    );
+    _totalEquipementsBonEtatNotifier.value = totalBonEtat;
+
+    int totalMauvaisEtat = _equipementsMauvaisEtatControllers.values.fold<int>(
+      0,
+      (sum, c) => sum + (int.tryParse(c.text) ?? 0),
+    );
+    _totalEquipementsMauvaisEtatNotifier.value = totalMauvaisEtat;
+  }
+
   void _updateTeacherList() {
+    if (!mounted) return;
     final count = int.tryParse(_totalEnseignantsController.text) ?? 0;
     if (count < 0) return;
-
-    setState(() {
-      while (_teachers.length < count) {
-        _teachers.add(TeacherData());
-      }
-      while (_teachers.length > count) {
-        _teachers.removeLast();
-      }
-    });
+    while (_teacherControllers.length < count) {
+      _teacherControllers.add(_TeacherControllers());
+    }
+    while (_teacherControllers.length > count) {
+      _teacherControllers.removeLast().dispose();
+    }
+    setState(() {});
   }
 
   Future<void> _submitForm() async {
@@ -154,103 +343,111 @@ class _ST2FormPageState extends State<ST2FormPage> {
       );
       return;
     }
-
     setState(() => _isSubmitting = true);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      if (mounted) setState(() => _isSubmitting = false);
+      return;
+    }
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) throw Exception("Utilisateur non connecté.");
-
-      // Création d'une Map pour stocker toutes les données
-      Map<String, dynamic> formData = {
-        'submittedAt': FieldValue.serverTimestamp(),
-        'submittedBy': user.uid,
-        'status': 'Soumis',
-
-        // Identification
-        'schoolName': _schoolNameController.text,
-        'chefEtablissementName': _fullNameController.text,
-        'niveauEcole': _niveauEcole,
-        'adresse': _adresseController.text,
-        'telephoneChef': _telephoneController.text,
-        'periode': _selectedPeriode,
-
-        // Localisation
-        'province': _selectedProvince,
-        'provinceEducationnelle': _selectedProvinceEdu,
-        'villeVillage': _villeVillageController.text,
-        'sousDivision': _selectedSousDivision,
-        'regimeGestion': _selectedRegimeGestion,
-        'refJuridique': _refJuridiqueController.text,
-        'idDinacope': _idDinacopeController.text,
-        'statutEtablissement': _selectedStatutEtablissement,
-
-        // Infos Générales
-        'hasProgrammesOfficiels': _hasProgrammesOfficiels,
-        'hasLatrines': _hasLatrines,
-        'latrinesTotal':
-            _hasLatrines == true
-                ? int.tryParse(_latrinesTotalController.text)
-                : null,
-        'latrinesFilles':
-            _hasLatrines == true
-                ? int.tryParse(_latrinesFillesController.text)
-                : null,
-        'hasPrevisionsBudgetaires': _hasPrevisionsBudgetaires,
-
-        // Données sur les paramètres scolaires
-        'totalEnseignants': int.tryParse(_totalEnseignantsController.text),
-        // Conversion de la liste d'objets TeacherData en une liste de Maps
-        'enseignants': _teachers.map((teacher) => teacher.toMap()).toList(),
-
-        // TODO: Ajouter les autres données spécifiques au niveau (élèves, manuels, etc.)
-        // Cette partie devra être complétée avec les contrôleurs des sections dynamiques
-      };
-
-      // Ajout des données à la collection 'st2_forms'
-      await FirebaseFirestore.instance.collection('st2_forms').add(formData);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Formulaire soumis avec succès !'),
-            backgroundColor: Colors.green,
+    final st2Data = ST2Model(
+      submittedBy: user.uid,
+      schoolName: _schoolNameController.text,
+      chefEtablissementName: _fullNameController.text,
+      niveauEcole: _niveauEcole,
+      adresse: _adresseController.text,
+      telephoneChef: _telephoneController.text,
+      periode: _selectedPeriode,
+      province: _selectedProvince,
+      provinceEducationnelle: _selectedProvinceEdu,
+      villeVillage: _villeVillageController.text,
+      sousDivision: _selectedSousDivision,
+      regimeGestion: _selectedRegimeGestion,
+      refJuridique: _refJuridiqueController.text,
+      idDinacope: _idDinacopeController.text,
+      statutEtablissement: _selectedStatutEtablissement,
+      hasProgrammesOfficiels: _hasProgrammesOfficiels,
+      hasLatrines: _hasLatrines,
+      latrinesTotal: int.tryParse(_latrinesTotalController.text),
+      latrinesFilles: int.tryParse(_latrinesFillesController.text),
+      hasPrevisionsBudgetaires: _hasPrevisionsBudgetaires,
+      classesOrganisees: _classesOrganiseesControllers.map(
+        (key, value) => MapEntry(key, int.tryParse(value.text) ?? 0),
+      ),
+      totalEnseignants: int.tryParse(_totalEnseignantsController.text) ?? 0,
+      enseignants:
+          _teacherControllers
+              .map(
+                (c) => TeacherData(
+                  nom: c.nom.text,
+                  matricule: c.matricule.text,
+                  anneeEngagement: int.tryParse(c.anneeEngagement.text),
+                  sexe: c.sexe,
+                  situationSalariale: c.situationSalariale,
+                  qualification: c.qualification,
+                ),
+              )
+              .toList(),
+      effectifsEleves: _effectifsGarconsControllers.map(
+        (key, value) => MapEntry(key, {
+          'garcons': int.tryParse(value.text) ?? 0,
+          'filles':
+              int.tryParse(_effectifsFillesControllers[key]?.text ?? '0') ?? 0,
+        }),
+      ),
+      manuelsDisponibles: _manuelsControllers.map(
+        (classe, manuelMap) => MapEntry(
+          classe,
+          manuelMap.map(
+            (manuel, controller) =>
+                MapEntry(manuel, int.tryParse(controller.text) ?? 0),
           ),
-        );
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la soumission : $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmitting = false);
-      }
+        ),
+      ),
+      equipements:
+          _equipements
+              .map(
+                (type) => EquipementData(
+                  type: type,
+                  enBonEtat:
+                      int.tryParse(
+                        _equipementsBonEtatControllers[type]!.text,
+                      ) ??
+                      0,
+                  enMauvaisEtat:
+                      int.tryParse(
+                        _equipementsMauvaisEtatControllers[type]!.text,
+                      ) ??
+                      0,
+                ),
+              )
+              .toList(),
+    );
+
+    final success = await _st2Controller.submitST2Form(
+      formData: st2Data,
+      context: context,
+    );
+    if (success && mounted) {
+      Navigator.of(context).pop();
+    } else if (mounted) {
+      setState(() => _isSubmitting = false);
     }
   }
 
-  //=========== Widgets réutilisables pour un code propre ===========
+  // --- WIDGET BUILDERS ---
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 24.0, bottom: 8.0),
-      child: Text(
-        title.toUpperCase(),
-        style: const TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.indigo,
-        ),
+  Widget _buildSectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+    child: Text(
+      title.toUpperCase(),
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.bold,
+        color: Colors.indigo,
       ),
-    );
-  }
-
+    ),
+  );
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -258,410 +455,137 @@ class _ST2FormPageState extends State<ST2FormPage> {
     bool enabled = true,
     int? maxLength,
     String? Function(String?)? validator,
-  }) {
-    return TextFormField(
-      controller: controller,
-      enabled: enabled,
-      style: const TextStyle(fontSize: 13),
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : [],
-      maxLength: maxLength,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.indigo, width: 2),
-        ),
-        counterText: "", // Cache le compteur de longueur
-        disabledBorder: UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
+  }) => TextFormField(
+    controller: controller,
+    enabled: enabled,
+    style: const TextStyle(fontSize: 13),
+    keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+    inputFormatters: isNumber ? [FilteringTextInputFormatter.digitsOnly] : [],
+    maxLength: maxLength,
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey),
       ),
-      validator:
-          validator ??
-          (value) {
-            if (value == null || value.isEmpty) {
-              return 'Ce champ est requis.';
-            }
-            return null;
-          },
-    );
-  }
-
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.indigo, width: 2),
+      ),
+      disabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      counterText: "",
+      contentPadding: const EdgeInsets.only(top: 12, bottom: 8),
+    ),
+    validator:
+        validator ??
+        (value) =>
+            (value == null || value.isEmpty) ? 'Ce champ est requis.' : null,
+  );
   Widget _buildDropdown<T>({
     required String label,
     required T? value,
     required List<DropdownMenuItem<T>> items,
     required void Function(T?) onChanged,
-    String? Function(T?)? validator,
-  }) {
-    return DropdownButtonFormField<T>(
-      value: value,
-      items: items,
-      onChanged: onChanged,
-      style: const TextStyle(fontSize: 13, color: Colors.black),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.indigo, width: 2),
-        ),
+  }) => DropdownButtonFormField<T>(
+    value: value,
+    items: items,
+    onChanged: onChanged,
+    style: const TextStyle(fontSize: 13, color: Colors.black87),
+    decoration: InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+      enabledBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey),
       ),
-      validator:
-          validator ??
-          (value) {
-            if (value == null) {
-              return 'Veuillez sélectionner une option.';
-            }
-            return null;
-          },
-    );
-  }
-
+      focusedBorder: const UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.indigo, width: 2),
+      ),
+      contentPadding: const EdgeInsets.only(top: 12, bottom: 4),
+    ),
+    validator:
+        (value) => value == null ? 'Veuillez sélectionner une option.' : null,
+  );
   Widget _buildYesNoQuestion({
     required String question,
     required bool? groupValue,
     required void Function(bool?) onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(question, style: const TextStyle(fontSize: 13)),
-        Row(
-          children: [
-            Text('Oui', style: const TextStyle(fontSize: 13)),
-            Radio<bool>(
-              value: true,
-              groupValue: groupValue,
-              onChanged: onChanged,
-            ),
-            const SizedBox(width: 20),
-            Text('Non', style: const TextStyle(fontSize: 13)),
-            Radio<bool>(
-              value: false,
-              groupValue: groupValue,
-              onChanged: onChanged,
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  //=========== Sections dynamiques du formulaire ===========
-
-  Widget _buildTeacherSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle("Informations sur le Personnel Enseignant"),
-        _buildTextField(
-          controller: _totalEnseignantsController,
-          label: 'Nombre d’enseignants au total',
-          isNumber: true,
-        ),
-        const SizedBox(height: 16),
-        // Génère dynamiquement les lignes pour chaque enseignant
-        if (_teachers.isNotEmpty)
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _teachers.length,
-            itemBuilder: (context, index) {
-              return FadeIn(
-                child: Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  elevation: 2,
-                  child: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Enseignant ${index + 1}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const Divider(),
-                        TextFormField(
-                          initialValue: _teachers[index].nom,
-                          onChanged: (val) => _teachers[index].nom = val,
-                          decoration: const InputDecoration(
-                            labelText: 'Nom de l’enseignant',
-                            border: UnderlineInputBorder(),
-                          ),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        _buildDropdown<String>(
-                          label: 'Sexe',
-                          value: _teachers[index].sexe,
-                          onChanged:
-                              (val) =>
-                                  setState(() => _teachers[index].sexe = val),
-                          items:
-                              ['Masculin', 'Féminin']
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Text(e),
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                        // ... Ajoutez les autres champs pour l'enseignant ici (matricule, etc.)
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(question, style: const TextStyle(fontSize: 13)),
+      Row(
+        children: [
+          Text('Oui', style: const TextStyle(fontSize: 13)),
+          Radio<bool>(
+            value: true,
+            groupValue: groupValue,
+            onChanged: onChanged,
+            activeColor: Colors.indigo,
           ),
-      ],
-    );
-  }
-
-  Widget _buildMaternelSection() {
-    // TODO: Construire la section spécifique pour le maternel
-    return Column(
-      children: [
-        _buildSectionTitle("Données pour le niveau Maternel"),
-        // Mettre ici les champs : NOMBRE DE CLASSES, EFFECTIFS, PATRIMOINES...
-        _buildTeacherSection(),
-      ],
-    );
-  }
-
-  Widget _buildPrimaireSection() {
-    // TODO: Construire la section spécifique pour le primaire
-    return Column(
-      children: [
-        _buildSectionTitle("Données pour le niveau Primaire"),
-        // Mettre ici les champs : NOMBRE DE CLASSES, EFFECTIFS, PATRIMOINES...
-        _buildTeacherSection(),
-      ],
-    );
-  }
-
-  Widget _buildSecondaireSection() {
-    // TODO: Construire la section spécifique pour le secondaire
-    return Column(
-      children: [
-        _buildSectionTitle("Données pour le niveau Secondaire"),
-        // Mettre ici les champs : NOMBRE DE CLASSES, EFFECTIFS, PATRIMOINES...
-        _buildTeacherSection(),
-      ],
-    );
-  }
-
-  Widget _buildConditionalSections() {
-    switch (_niveauEcole) {
-      case 'maternel':
-        return _buildMaternelSection();
-      case 'primaire':
-        return _buildPrimaireSection();
-      case 'secondaire':
-        return _buildSecondaireSection();
-      default:
-        return const Center(
-          child: Text(
-            'Niveau scolaire non défini, impossible d\'afficher le formulaire.',
+          const SizedBox(width: 20),
+          Text('Non', style: const TextStyle(fontSize: 13)),
+          Radio<bool>(
+            value: false,
+            groupValue: groupValue,
+            onChanged: onChanged,
+            activeColor: Colors.indigo,
           ),
-        );
-    }
-  }
-
-  //=========== Méthode de construction principale (build) ===========
+        ],
+      ),
+    ],
+  );
+  Widget _buildSectionCard({
+    required String title,
+    required List<Widget> children,
+  }) => FadeInUp(
+    duration: const Duration(milliseconds: 500),
+    child: Card(
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [_buildSectionTitle(title), ...children],
+        ),
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Formulaire ST2"),
+        title: const Text("Formulaire de Collecte ST2"),
         backgroundColor: Colors.indigo,
+        elevation: 4,
       ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
+              : _niveauEcole == null
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    "Impossible de charger les données pour cet utilisateur.\nVeuillez vérifier la connexion ou contacter l'administrateur.",
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
               : Form(
                 key: _formKey,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20.0),
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // --- Chaque section est animée pour un effet moderne ---
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 400),
-                        child: Card(
-                          elevation: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSectionTitle(
-                                  "Identification de l'établissement",
-                                ),
-                                _buildTextField(
-                                  controller: _schoolNameController,
-                                  label: "Nom de l'établissement",
-                                  enabled: false,
-                                ),
-                                _buildTextField(
-                                  controller: _fullNameController,
-                                  label: "Nom du chef de l'établissement",
-                                  enabled: false,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    "Niveau école : ${_niveauEcole ?? 'N/A'}",
-                                    style: const TextStyle(fontSize: 13),
-                                  ),
-                                ),
-                                _buildTextField(
-                                  controller: _adresseController,
-                                  label: "Adresse de l'établissement",
-                                ),
-                                _buildTextField(
-                                  controller: _telephoneController,
-                                  label: "Téléphone du chef Ets",
-                                  isNumber: true,
-                                  maxLength: 10,
-                                ),
-                                _buildDropdown<String>(
-                                  label: 'Période',
-                                  value: _selectedPeriode,
-                                  items:
-                                      ['SEMESTRE 1', 'SEMESTRE 2']
-                                          .map(
-                                            (p) => DropdownMenuItem(
-                                              value: p,
-                                              child: Text(p),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _selectedPeriode = val,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 500),
-                        child: Card(
-                          elevation: 2,
-                          margin: const EdgeInsets.only(top: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSectionTitle(
-                                  "Localisation Administrative",
-                                ),
-                                // ... (Ajoutez tous les autres champs ici)
-                                _buildTextField(
-                                  controller: _refJuridiqueController,
-                                  label: "Réf. juridique (arrêté d’agrément)",
-                                ),
-                                _buildTextField(
-                                  controller: _idDinacopeController,
-                                  label: "ID DINACOPE",
-                                  isNumber: true,
-                                  maxLength: 15,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 600),
-                        child: Card(
-                          elevation: 2,
-                          margin: const EdgeInsets.only(top: 16),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSectionTitle("Informations Générales"),
-                                _buildYesNoQuestion(
-                                  question:
-                                      'L’établissement dispose-t-il des programmes officiels de cours ?',
-                                  groupValue: _hasProgrammesOfficiels,
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _hasProgrammesOfficiels = val,
-                                      ),
-                                ),
-                                const SizedBox(height: 16),
-                                _buildYesNoQuestion(
-                                  question: 'L’existence des latrines (W.C) ?',
-                                  groupValue: _hasLatrines,
-                                  onChanged:
-                                      (val) =>
-                                          setState(() => _hasLatrines = val),
-                                ),
-                                // Affiche les champs de nombre si la réponse est "Oui"
-                                if (_hasLatrines == true)
-                                  FadeIn(
-                                    child: Column(
-                                      children: [
-                                        _buildTextField(
-                                          controller: _latrinesTotalController,
-                                          label:
-                                              'Nombre total de compartiments',
-                                          isNumber: true,
-                                        ),
-                                        _buildTextField(
-                                          controller: _latrinesFillesController,
-                                          label: 'Dont pour les filles',
-                                          isNumber: true,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                const SizedBox(height: 16),
-                                _buildYesNoQuestion(
-                                  question:
-                                      'Votre Etablissement dispose-t-il des prévisions budgétaires et des documents comptables ?',
-                                  groupValue: _hasPrevisionsBudgetaires,
-                                  onChanged:
-                                      (val) => setState(
-                                        () => _hasPrevisionsBudgetaires = val,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Affiche la section correcte en fonction du niveau de l'école
-                      FadeInUp(
-                        duration: const Duration(milliseconds: 700),
-                        child: _buildConditionalSections(),
-                      ),
-
-                      const SizedBox(height: 40),
-
-                      // --- Bouton de soumission ---
+                      _buildIdentificationSection(),
+                      _buildLocalisationSection(),
+                      _buildInfosGeneralesSection(),
+                      _buildConditionalForm(),
+                      const SizedBox(height: 32),
                       if (_isSubmitting)
                         const Center(child: CircularProgressIndicator())
                       else
@@ -672,12 +596,15 @@ class _ST2FormPageState extends State<ST2FormPage> {
                             label: const Text("SOUMETTRE LE FORMULAIRE"),
                             onPressed: _submitForm,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: Colors.green.shade600,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               textStyle: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.bold,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
                               ),
                             ),
                           ),
@@ -688,4 +615,613 @@ class _ST2FormPageState extends State<ST2FormPage> {
               ),
     );
   }
+
+  // --- Widgets de construction pour chaque section ---
+
+  Widget _buildIdentificationSection() => _buildSectionCard(
+    title: "Identification",
+    children: [
+      _buildTextField(
+        controller: _schoolNameController,
+        label: "Nom de l'établissement",
+        enabled: false,
+      ),
+      _buildTextField(
+        controller: _fullNameController,
+        label: "Nom du chef de l'établissement",
+        enabled: false,
+      ),
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        child: Text(
+          "Niveau école : ${_niveauEcole?.toUpperCase() ?? 'N/A'}",
+          style: const TextStyle(fontSize: 13, color: Colors.black54),
+        ),
+      ),
+      _buildTextField(
+        controller: _adresseController,
+        label: "Adresse de l'établissement",
+      ),
+      _buildTextField(
+        controller: _telephoneController,
+        label: "Téléphone du chef Ets",
+        isNumber: true,
+        maxLength: 10,
+      ),
+      _buildDropdown<String>(
+        label: 'Période',
+        value: _selectedPeriode,
+        items:
+            ['SEMESTRE 1', 'SEMESTRE 2']
+                .map(
+                  (p) => DropdownMenuItem(
+                    value: p,
+                    child: Text(p, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
+        onChanged: (val) => setState(() => _selectedPeriode = val),
+      ),
+    ],
+  );
+
+  Widget _buildLocalisationSection() => _buildSectionCard(
+    title: "Localisation Administrative",
+    children: [
+      _buildDropdown<String>(
+        label: 'Province',
+        value: _selectedProvince,
+        items: [
+          const DropdownMenuItem(
+            value: 'HAUT-LOMAMI',
+            child: Text('HAUT-LOMAMI', style: TextStyle(fontSize: 13)),
+          ),
+        ],
+        onChanged: (val) {},
+      ),
+      _buildDropdown<String>(
+        label: 'Province éducationnelle',
+        value: _selectedProvinceEdu,
+        items: [
+          const DropdownMenuItem(
+            value: 'HAUT-LOMAMI 1',
+            child: Text('HAUT-LOMAMI 1', style: TextStyle(fontSize: 13)),
+          ),
+        ],
+        onChanged: (val) {},
+      ),
+      _buildTextField(
+        controller: _villeVillageController,
+        label: 'Ville/Village',
+      ),
+      _buildDropdown<String>(
+        label: 'Sous-division',
+        value: _selectedSousDivision,
+        items:
+            _sousDivisions
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
+        onChanged: (val) => setState(() => _selectedSousDivision = val),
+      ),
+      _buildDropdown<String>(
+        label: 'Régime de gestion',
+        value: _selectedRegimeGestion,
+        items:
+            _regimesGestion
+                .map(
+                  (r) => DropdownMenuItem(
+                    value: r,
+                    child: Text(r, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
+        onChanged: (val) => setState(() => _selectedRegimeGestion = val),
+      ),
+      _buildTextField(
+        controller: _refJuridiqueController,
+        label: 'Réf. juridique (arrêté d’agrément)',
+      ),
+      _buildTextField(
+        controller: _idDinacopeController,
+        label: 'ID DINACOPE',
+        isNumber: true,
+        maxLength: 15,
+      ),
+      _buildDropdown<String>(
+        label: 'L’établissement est',
+        value: _selectedStatutEtablissement,
+        items:
+            _statutsEtablissement
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                  ),
+                )
+                .toList(),
+        onChanged: (val) => setState(() => _selectedStatutEtablissement = val),
+      ),
+    ],
+  );
+
+  Widget _buildInfosGeneralesSection() => _buildSectionCard(
+    title: "Informations Générales",
+    children: [
+      _buildYesNoQuestion(
+        question:
+            'L’établissement dispose-t-il des programmes officiels de cours ?',
+        groupValue: _hasProgrammesOfficiels,
+        onChanged: (val) => setState(() => _hasProgrammesOfficiels = val),
+      ),
+      const SizedBox(height: 16),
+      _buildYesNoQuestion(
+        question: 'L’existence des latrines (W.C) ?',
+        groupValue: _hasLatrines,
+        onChanged: (val) => setState(() => _hasLatrines = val),
+      ),
+      if (_hasLatrines == true)
+        FadeIn(
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: _latrinesTotalController,
+                label: 'Préciser le nombre de compartiments',
+                isNumber: true,
+                validator: (v) => null,
+              ),
+              _buildTextField(
+                controller: _latrinesFillesController,
+                label: 'Dont pour les filles',
+                isNumber: true,
+                validator: (v) => null,
+              ),
+            ],
+          ),
+        ),
+      const SizedBox(height: 16),
+      _buildYesNoQuestion(
+        question:
+            'Votre Etablissement dispose-t-il des prévisions budgétaires et des documents comptables ?',
+        groupValue: _hasPrevisionsBudgetaires,
+        onChanged: (val) => setState(() => _hasPrevisionsBudgetaires = val),
+      ),
+    ],
+  );
+
+  Widget _buildConditionalForm() => Column(
+    children: [
+      _buildSectionCard(
+        title: "Données sur les Différents Paramètres Scolaires",
+        children: [
+          _buildClassesOrganiseesSection(),
+          const SizedBox(height: 24),
+          _buildPersonnelEnseignantSection(),
+        ],
+      ),
+      _buildSectionCard(
+        title: "Effectifs des Élèves Inscrits par Sexe et Année d’Études",
+        children: [_buildEffectifsElevesSection()],
+      ),
+      _buildSectionCard(
+        title: "Patrimoines Scolaires",
+        children: [
+          _buildPatrimoinesManuelsSection(),
+          const SizedBox(height: 24),
+          _buildPatrimoinesEquipementsSection(),
+        ],
+      ),
+    ],
+  );
+
+  Widget _buildClassesOrganiseesSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionTitle("Nombre de Classes Organisées"),
+      ..._classesDuNiveau.map(
+        (c) => _buildTextField(
+          controller: _classesOrganiseesControllers[c]!,
+          label: 'Classe de $c',
+          isNumber: true,
+          validator: (v) => null,
+        ),
+      ),
+      const Divider(height: 24, thickness: 1),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total",
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          ValueListenableBuilder<int>(
+            valueListenable: _totalClassesOrganiseesNotifier,
+            builder:
+                (context, total, child) => Text(
+                  "$total",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          ),
+        ],
+      ),
+    ],
+  );
+
+  Widget _buildPersonnelEnseignantSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionTitle("Informations Relatives au Personnel Enseignant"),
+      _buildTextField(
+        controller: _totalEnseignantsController,
+        label: 'Nombre d’enseignants au total',
+        isNumber: true,
+        validator: (v) => null,
+      ),
+      const SizedBox(height: 16),
+      ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _teacherControllers.length,
+        itemBuilder: (context, index) {
+          final c = _teacherControllers[index];
+          return Card(
+            elevation: 1.5,
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Enseignant ${index + 1}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                  const Divider(),
+                  _buildTextField(
+                    controller: c.nom,
+                    label: 'Nom de l’enseignant',
+                  ),
+                  _buildDropdown<String>(
+                    label: 'Sexe',
+                    value: c.sexe,
+                    items:
+                        ['Masculin', 'Féminin']
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (val) => setState(() => c.sexe = val),
+                  ),
+                  _buildTextField(
+                    controller: c.matricule,
+                    label: 'Matricule DINACOPE',
+                    isNumber: true,
+                  ),
+                  _buildDropdown<String>(
+                    label: 'Situation salariale',
+                    value: c.situationSalariale,
+                    items:
+                        ['Payé', 'Non payé']
+                            .map(
+                              (s) => DropdownMenuItem(
+                                value: s,
+                                child: Text(
+                                  s,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                    onChanged:
+                        (val) => setState(() => c.situationSalariale = val),
+                  ),
+                  _buildTextField(
+                    controller: c.anneeEngagement,
+                    label: 'Année d’engagement',
+                    isNumber: true,
+                    maxLength: 4,
+                  ),
+                  _buildDropdown<String>(
+                    label: 'Qualification',
+                    value: c.qualification,
+                    items:
+                        _qualificationsEnseignant
+                            .map(
+                              (q) => DropdownMenuItem(
+                                value: q,
+                                child: Text(
+                                  q,
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (val) => setState(() => c.qualification = val),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ],
+  );
+
+  Widget _buildEffectifsElevesSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      ..._classesDuNiveau.map(
+        (classe) => Column(
+          children: [
+            Text(
+              'Classe de $classe',
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    controller: _effectifsGarconsControllers[classe]!,
+                    label: 'Total Garçons',
+                    isNumber: true,
+                    validator: (v) => null,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildTextField(
+                    controller: _effectifsFillesControllers[classe]!,
+                    label: 'Total Filles',
+                    isNumber: true,
+                    validator: (v) => null,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const Divider(height: 24, thickness: 1),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total Effectif",
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          ValueListenableBuilder<int>(
+            valueListenable: _totalElevesNotifier,
+            builder:
+                (context, total, child) => Text(
+                  "$total",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          ),
+        ],
+      ),
+    ],
+  );
+
+  Widget _buildPatrimoinesManuelsSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionTitle("Nombre de Manuels Disponibles Utilisables"),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          columnSpacing: 20,
+          columns: [
+            const DataColumn(
+              label: Text(
+                'Manuels',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+            ),
+            ..._classesDuNiveau.map(
+              (c) => DataColumn(
+                label: Text(
+                  c,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                numeric: true,
+              ),
+            ),
+          ],
+          rows: [
+            ..._manuelsDuNiveau.map(
+              (manuel) => DataRow(
+                cells: [
+                  DataCell(Text(manuel, style: const TextStyle(fontSize: 13))),
+                  ..._classesDuNiveau.map(
+                    (classe) => DataCell(
+                      SizedBox(
+                        width: 60,
+                        child: _buildTextField(
+                          controller: _manuelsControllers[classe]![manuel]!,
+                          label: '',
+                          isNumber: true,
+                          validator: (v) => null,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            DataRow(
+              cells: [
+                const DataCell(
+                  Text(
+                    'Total',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ..._classesDuNiveau.map(
+                  (classe) => DataCell(
+                    _totalManuelsParClasseNotifier[classe] == null
+                        ? const Text('N/A')
+                        : ValueListenableBuilder<int>(
+                          valueListenable:
+                              _totalManuelsParClasseNotifier[classe]!,
+                          builder:
+                              (context, total, child) => Text(
+                                '$total',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      const Divider(height: 24, thickness: 1),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            "Total Général des Manuels",
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+          ),
+          ValueListenableBuilder<int>(
+            valueListenable: _totalManuelsGeneralNotifier,
+            builder:
+                (context, total, child) => Text(
+                  "$total",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+          ),
+        ],
+      ),
+    ],
+  );
+
+  Widget _buildPatrimoinesEquipementsSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildSectionTitle("Nombre d’Equipements Existants"),
+      DataTable(
+        columnSpacing: 16,
+        headingRowHeight: 40,
+        columns: const [
+          DataColumn(
+            label: Text(
+              'Type',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ),
+          DataColumn(
+            label: Text(
+              'Bon État',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            numeric: true,
+          ),
+          DataColumn(
+            label: Text(
+              'Mauvais État',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+            numeric: true,
+          ),
+        ],
+        rows: [
+          ..._equipements.map(
+            (equip) => DataRow(
+              cells: [
+                DataCell(
+                  SizedBox(
+                    width: 100,
+                    child: Text(equip, style: const TextStyle(fontSize: 13)),
+                  ),
+                ),
+                DataCell(
+                  _buildTextField(
+                    controller: _equipementsBonEtatControllers[equip]!,
+                    label: '',
+                    isNumber: true,
+                    validator: (v) => null,
+                  ),
+                ),
+                DataCell(
+                  _buildTextField(
+                    controller: _equipementsMauvaisEtatControllers[equip]!,
+                    label: '',
+                    isNumber: true,
+                    validator: (v) => null,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          DataRow(
+            cells: [
+              const DataCell(
+                Text(
+                  'Total',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+              DataCell(
+                ValueListenableBuilder<int>(
+                  valueListenable: _totalEquipementsBonEtatNotifier,
+                  builder:
+                      (context, total, child) => Text(
+                        '$total',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                ),
+              ),
+              DataCell(
+                ValueListenableBuilder<int>(
+                  valueListenable: _totalEquipementsMauvaisEtatNotifier,
+                  builder:
+                      (context, total, child) => Text(
+                        '$total',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ],
+  );
 }

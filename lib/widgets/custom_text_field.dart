@@ -1,21 +1,28 @@
+// lib/widgets/custom_text_field.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Import requis pour les InputFormatters
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String labelText;
+  final IconData icon;
   final bool obscureText;
-  final TextInputType? keyboardType;
-  final IconData? icon;
+  final TextInputType keyboardType;
   final String? Function(String?)? validator;
+
+  // CORRECTION : Ajout du paramètre 'inputFormatters'
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
     required this.controller,
     required this.labelText,
+    required this.icon,
     this.obscureText = false,
-    this.keyboardType,
-    this.icon,
-    required this.validator,
+    this.keyboardType = TextInputType.text,
+    this.validator,
+    this.inputFormatters, // Le rendre disponible dans le constructeur
   });
 
   @override
@@ -25,30 +32,15 @@ class CustomTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      // CORRECTION : Passage du paramètre au TextFormField interne
+      inputFormatters: inputFormatters,
       decoration: InputDecoration(
-        prefixIcon: icon != null ? Icon(icon, color: Color(0xFFC62828)) : null,
         labelText: labelText,
-        labelStyle: const TextStyle(color: Color(0xFF212121), fontSize: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color(0xFFC62828)), // Rouge
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Colors.black87),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(
-            color: Color(0xFFF9A825),
-            width: 2,
-          ), // Jaune
-        ),
-        filled: true,
-        fillColor: const Color(0xFFF5F5F5), // Gris clair
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
         contentPadding: const EdgeInsets.symmetric(
-          vertical: 14,
-          horizontal: 20,
+          vertical: 16,
+          horizontal: 12,
         ),
       ),
     );

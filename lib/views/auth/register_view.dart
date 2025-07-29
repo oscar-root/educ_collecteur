@@ -1,13 +1,16 @@
-import 'dart:io';
+// lib/views/auth/register_view.dart
+
+import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import '../../../controllers/auth_controller.dart';
-import '../../../widgets/custom_button.dart';
-import '../../../widgets/custom_text_field.dart';
+import 'package:flutter/services.dart';
+
+// Assurez-vous que les chemins d'importation sont corrects pour votre projet
+import '../../controllers/auth_controller.dart';
+import '../../widgets/custom_button.dart';
+import '../../widgets/custom_text_field.dart';
 
 class RegisterView extends StatefulWidget {
-  final bool
-  fromAdmin; // important : détermine si l'enregistrement vient de l'admin
+  final bool fromAdmin;
 
   const RegisterView({super.key, this.fromAdmin = false});
 
@@ -25,32 +28,29 @@ class _RegisterViewState extends State<RegisterView> {
   final _codeEcoleController = TextEditingController();
   final _phoneController = TextEditingController();
 
-  final _authController = AuthController();
+  final AuthController _authController = AuthController();
 
-  String _selectedRole = 'chef'; // valeur par défaut
+  String _selectedRole = 'chef';
   String _selectedGender = 'Masculin';
-  String _selectedNiveau = 'Maternelle';
+  String _selectedNiveau = 'secondaire';
 
-  File? _selectedImage;
   bool _isLoading = false;
-  String? _errorMessage;
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _selectedImage = File(picked.path);
-      });
-    }
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _fullNameController.dispose();
+    _schoolNameController.dispose();
+    _codeEcoleController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final user = await _authController.registerExtended(
@@ -63,223 +63,260 @@ class _RegisterViewState extends State<RegisterView> {
         niveauEcole: _selectedNiveau,
         gender: _selectedGender,
         role: _selectedRole,
-        photo: _selectedImage,
       );
 
-      if (user != null) {
+      if (user != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Compte pour ${user.email} créé avec succès !'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pop(context);
-      } else {
-        setState(() => _errorMessage = "Échec de l'inscription.");
       }
     } catch (e) {
-      setState(() => _errorMessage = e.toString());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur : ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final roles =
-        widget.fromAdmin
-            ? ['admin', 'chef_service', 'chef']
-            : ['chef']; // Si depuis login, rôle fixé
+        widget.fromAdmin ? ['admin', 'chef_service', 'chef'] : ['chef'];
+    if (!widget.fromAdmin) {
+      _selectedRole = 'chef';
+    }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Inscription')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(28),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.school_outlined,
-                  size: 80,
+      appBar: AppBar(
+        title: const Text('Créer un Compte'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(
+          color: Theme.of(context).textTheme.bodyLarge?.color,
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              FadeInDown(
+                child: const Icon(
+                  Icons.person_add_outlined,
+                  size: 60,
                   color: Colors.indigo,
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  "Créer un compte",
+              ),
+              const SizedBox(height: 16),
+              FadeInUp(
+                child: Text(
+                  "Inscription",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 8),
+              FadeInUp(
+                delay: const Duration(milliseconds: 200),
+                child: Text(
+                  "Veuillez remplir tous les champs pour créer le nouvel utilisateur.",
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 32),
 
-                // Avatar
-                GestureDetector(
-                  onTap: _pickImage,
-                  child: CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.indigo.withOpacity(0.2),
-                    backgroundImage:
-                        _selectedImage != null
-                            ? FileImage(_selectedImage!)
-                            : null,
-                    child:
-                        _selectedImage == null
-                            ? const Icon(
-                              Icons.camera_alt,
-                              color: Colors.indigo,
-                              size: 32,
-                            )
-                            : null,
+              _buildSectionCard(
+                title: "Informations Personnelles",
+                children: [
+                  CustomTextField(
+                    controller: _fullNameController,
+                    labelText: 'Nom complet',
+                    icon: Icons.person_outline,
+                    validator: (v) => v!.isEmpty ? 'Champ requis' : null,
                   ),
-                ),
-                const SizedBox(height: 20),
-
-                CustomTextField(
-                  controller: _fullNameController,
-                  labelText: 'Nom complet',
-                  icon: Icons.person_outline,
-                  validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                ),
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-                  value: _selectedRole,
-                  items:
-                      roles
-                          .map(
-                            (r) => DropdownMenuItem(value: r, child: Text(r)),
-                          )
-                          .toList(),
-                  onChanged:
-                      widget.fromAdmin
-                          ? (val) => setState(() => _selectedRole = val!)
-                          : null,
-                  decoration: const InputDecoration(
-                    labelText: 'Rôle',
-                    prefixIcon: Icon(Icons.security_outlined),
-                    border: OutlineInputBorder(),
+                  const SizedBox(height: 16),
+                  // Ce champ utilise maintenant correctement le 'inputFormatters' qui a été ajouté à CustomTextField
+                  CustomTextField(
+                    controller: _phoneController,
+                    labelText: 'Numéro de téléphone',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    validator: (v) => v!.isEmpty ? 'Numéro requis' : null,
                   ),
-                ),
-                const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  _buildDropdown(
+                    value: _selectedGender,
+                    label: 'Genre',
+                    icon: Icons.wc_outlined,
+                    items: ['Masculin', 'Féminin'],
+                    onChanged: (val) => setState(() => _selectedGender = val!),
+                  ),
+                ],
+              ),
 
-                CustomTextField(
-                  controller: _phoneController,
-                  labelText: 'Numéro téléphone (12 chiffres)',
-                  icon: Icons.phone_android,
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Champ requis';
-                    if (value.length != 12) return 'Numéro invalide';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
+              _buildSectionCard(
+                title: "Informations sur l'Établissement",
+                children: [
+                  CustomTextField(
+                    controller: _schoolNameController,
+                    labelText: "Nom de l’établissement",
+                    icon: Icons.apartment_outlined,
+                    validator: (v) => v!.isEmpty ? 'Champ requis' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _codeEcoleController,
+                    labelText: 'Code école',
+                    icon: Icons.pin_outlined,
+                    validator: (v) => v!.isEmpty ? 'Champ requis' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildDropdown(
+                    value: _selectedNiveau,
+                    label: 'Niveau d’école',
+                    icon: Icons.school_outlined,
+                    items: ['maternel', 'primaire', 'secondaire'],
+                    onChanged: (val) => setState(() => _selectedNiveau = val!),
+                  ),
+                ],
+              ),
 
-                CustomTextField(
-                  controller: _emailController,
-                  labelText: 'Email',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  validator:
-                      (value) =>
-                          value == null || !value.contains('@')
-                              ? 'Email invalide'
-                              : null,
-                ),
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  controller: _passwordController,
-                  labelText: 'Mot de passe',
-                  icon: Icons.lock_outline,
-                  obscureText: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) return 'Champ requis';
-                    if (value.length < 6) return 'Au moins 6 caractères';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                DropdownButtonFormField<String>(
-                  value: _selectedGender,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Masculin',
-                      child: Text('Masculin'),
+              _buildSectionCard(
+                title: "Identifiants de Connexion",
+                children: [
+                  CustomTextField(
+                    controller: _emailController,
+                    labelText: 'Email',
+                    icon: Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                    validator:
+                        (v) =>
+                            v == null || !v.contains('@')
+                                ? 'Email invalide'
+                                : null,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: _passwordController,
+                    labelText: 'Mot de passe',
+                    icon: Icons.lock_outline,
+                    obscureText: true,
+                    validator:
+                        (v) =>
+                            v == null || v.length < 6
+                                ? '6 caractères minimum'
+                                : null,
+                  ),
+                  const SizedBox(height: 16),
+                  if (widget.fromAdmin)
+                    _buildDropdown(
+                      value: _selectedRole,
+                      label: 'Rôle',
+                      icon: Icons.verified_user_outlined,
+                      items: roles,
+                      onChanged: (val) => setState(() => _selectedRole = val!),
                     ),
-                    DropdownMenuItem(value: 'Féminin', child: Text('Féminin')),
-                  ],
-                  onChanged: (val) => setState(() => _selectedGender = val!),
-                  decoration: const InputDecoration(
-                    labelText: 'Genre',
-                    prefixIcon: Icon(Icons.people_outline),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                ],
+              ),
 
-                CustomTextField(
-                  controller: _schoolNameController,
-                  labelText: "Nom de l’établissement",
-                  icon: Icons.apartment_outlined,
-                  validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                ),
-                const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-                DropdownButtonFormField<String>(
-                  value: _selectedNiveau,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'Maternelle',
-                      child: Text('Maternel'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Primaire',
-                      child: Text('Primaire'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'Secondaire',
-                      child: Text('Secondaire'),
-                    ),
-                  ],
-                  onChanged: (val) => setState(() => _selectedNiveau = val!),
-                  decoration: const InputDecoration(
-                    labelText: 'Niveau d’école',
-                    prefixIcon: Icon(Icons.school),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
+              CustomButton(
+                text: _isLoading ? 'Création en cours...' : 'Créer le compte',
+                icon: Icons.person_add_alt_1,
+                onPressed: _isLoading ? null : _handleRegister,
+              ),
 
-                CustomTextField(
-                  controller: _codeEcoleController,
-                  labelText: 'Code école',
-                  icon: Icons.confirmation_number,
-                  keyboardType: TextInputType.number,
-                  validator: (value) => value!.isEmpty ? 'Champ requis' : null,
-                ),
+              const SizedBox(height: 20),
 
-                const SizedBox(height: 24),
-
-                if (_errorMessage != null)
-                  Text(
-                    _errorMessage!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                const SizedBox(height: 12),
-
-                CustomButton(
-                  text: _isLoading ? 'Création en cours...' : 'S’inscrire',
-                  icon: Icons.person_add_alt,
-                  onPressed: _isLoading ? null : _handleRegister,
-                ),
-                const SizedBox(height: 20),
+              if (!widget.fromAdmin)
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text("Retour à la connexion"),
+                  child: const Text("Vous avez déjà un compte ? Se connecter"),
                 ),
-              ],
-            ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required List<Widget> children,
+  }) {
+    return FadeInUp(
+      delay: const Duration(milliseconds: 300),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.only(bottom: 24),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
+              ),
+              const Divider(height: 24),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required String label,
+    required IconData icon,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items:
+          items
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(item[0].toUpperCase() + item.substring(1)),
+                ),
+              )
+              .toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
         ),
       ),
     );

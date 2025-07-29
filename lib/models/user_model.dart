@@ -1,3 +1,9 @@
+// lib/models/user_model.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Représente le modèle de données pour un utilisateur de l'application.
+/// Cette classe est utilisée pour structurer les informations récupérées de Firestore.
 class UserModel {
   final String uid;
   final String email;
@@ -8,8 +14,9 @@ class UserModel {
   final String niveauEcole;
   final String gender;
   final String role;
-  final String photoUrl;
+  final Timestamp? createdAt; // Champ ajouté pour la date de création
 
+  // --- CORRECTION : Le constructeur est maintenant à l'intérieur de la classe ---
   UserModel({
     required this.uid,
     required this.email,
@@ -20,9 +27,11 @@ class UserModel {
     required this.niveauEcole,
     required this.gender,
     required this.role,
-    required this.photoUrl,
+    this.createdAt,
   });
 
+  /// Crée une instance de UserModel à partir d'une Map (généralement depuis Firestore).
+  /// Utilise des valeurs par défaut ('') pour éviter les erreurs si un champ est manquant.
   factory UserModel.fromMap(Map<String, dynamic> data) {
     return UserModel(
       uid: data['uid'] ?? '',
@@ -34,10 +43,11 @@ class UserModel {
       niveauEcole: data['niveauEcole'] ?? '',
       gender: data['gender'] ?? '',
       role: data['role'] ?? '',
-      photoUrl: data['photoUrl'] ?? '',
+      createdAt: data['createdAt'] as Timestamp?, // Lecture du Timestamp
     );
   }
 
+  /// Convertit l'instance de UserModel en une Map pour l'écriture dans Firestore.
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,
@@ -49,7 +59,9 @@ class UserModel {
       'niveauEcole': niveauEcole,
       'gender': gender,
       'role': role,
-      'photoUrl': photoUrl,
+      'createdAt':
+          createdAt ??
+          FieldValue.serverTimestamp(), // Utilise la date existante ou en crée une nouvelle
     };
   }
-}
+} // --- CORRECTION : L'accolade de fermeture de la classe est ici ---

@@ -1,16 +1,25 @@
-import 'dart:io';
+// lib/controllers/auth_controller.dart
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
+// Note : L'import de 'user_model.dart' est conservé car il est utilisé dans 'getCurrentUserModel'.
+// Assurez-vous que ce fichier n'attend plus de 'photoUrl' dans son constructeur.
 import '../models/user_model.dart';
 
-class AuthService {
+/// Gère toutes les opérations d'authentification et de gestion des utilisateurs avec Firebase.
+class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  /// Connexion
-  Future<User?> signIn(String email, String password) async {
+  // Note : FirebaseStorage a été retiré car il n'est plus utilisé.
+
+  /// Connecte un utilisateur avec son email et son mot de passe.
+  /// Retourne l'objet User en cas de succès, sinon propage une exception.
+  Future<User?> signIn({
+    required String email,
+    required String password,
+  }) async {
     final result = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -18,26 +27,12 @@ class AuthService {
     return result.user;
   }
 
-  /// Enregistrement basique
-  Future<User?> signUp(String email, String password, String role) async {
-    final result = await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-    final user = result.user;
-    if (user != null) {
-      await _db.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'email': email,
-        'role': role,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    }
-    return user;
-  }
-
-  /// Enregistrement complet avec photo, téléphone, école, etc.
-  Future<User?> signUpExtended({
+  /// **MÉTHODE MISE À JOUR**
+  /// Enregistre un nouvel utilisateur avec toutes les informations du formulaire,
+  /// sans la photo.
+  /// Crée un compte dans Firebase Auth, puis sauvegarde les informations détaillées
+  /// dans un document de la collection 'users' sur Firestore.
+  Future<User?> registerExtended({
     required String email,
     required String password,
     required String fullName,
@@ -47,41 +42,46 @@ class AuthService {
     required String niveauEcole,
     required String gender,
     required String role,
-    File? photo,
   }) async {
-    final result = await _auth.createUserWithEmailAndPassword(
+    // 1. Créer l'utilisateur dans Firebase Authentication
+    final UserCredential result = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
 
     final user = result.user;
-    if (user == null) return null;
-
-    String photoUrl = '';
-    if (photo != null) {
-      final ref = _storage.ref().child('profile_photos/${user.uid}.jpg');
-      await ref.putFile(photo);
-      photoUrl = await ref.getDownloadURL();
+    if (user == null) {
+      // Ce cas est peu probable mais c'est une bonne sécurité
+      throw Exception(
+        "La création de l'utilisateur a échoué, aucun utilisateur retourné.",
+      );
     }
 
-    await _db.collection('users').doc(user.uid).set({
+    // 2. La logique de téléversement de la photo a été complètement retirée.
+
+    // 3. Créer le document utilisateur dans Firestore
+    final userData = {
       'uid': user.uid,
       'email': email,
       'fullName': fullName,
       'phone': phone,
       'schoolName': schoolName,
       'codeEcole': codeEcole,
-      'niveauEcole': niveauEcole,
+      'niveauEcole':
+          niveauEcole
+              .toLowerCase(), // Sauvegarde en minuscules pour la cohérence
       'gender': gender,
-      'role': role,
-      'photoUrl': photoUrl,
+      'role': role.toLowerCase(), // Sauvegarde en minuscules
       'createdAt': FieldValue.serverTimestamp(),
-    });
+    };
+
+    await _db.collection('users').doc(user.uid).set(userData);
 
     return user;
   }
 
-  /// Récupérer l'utilisateur actuel avec ses données
+  /// Récupère les données de l'utilisateur actuellement connecté
+  /// et les transforme en un objet UserModel.
   Future<UserModel?> getCurrentUserModel() async {
     final user = _auth.currentUser;
     if (user != null) {
@@ -93,13 +93,13 @@ class AuthService {
     return null;
   }
 
-  /// Déconnexion
+  /// Déconnecte l'utilisateur actuel.
   Future<void> signOut() async {
     await _auth.signOut();
   }
 
-  /// Réinitialisation du mot de passe
-  Future<void> resetPassword(String email) async {
+  /// Envoie un email de réinitialisation de mot de passe à l'adresse fournie.
+  Future<void> resetPassword({required String email}) async {
     await _auth.sendPasswordResetEmail(email: email);
   }
 }

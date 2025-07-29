@@ -1,6 +1,8 @@
+// lib/st2/models/st2_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Modèle pour les données d'un enseignant.
+/// Modèle pour les données d'un enseignant, correspondant aux champs du formulaire.
 class TeacherData {
   final String nom;
   final String? sexe;
@@ -18,7 +20,6 @@ class TeacherData {
     this.qualification,
   });
 
-  // Convertit l'objet TeacherData en Map pour Firestore
   Map<String, dynamic> toMap() {
     return {
       'nom': nom,
@@ -30,15 +31,14 @@ class TeacherData {
     };
   }
 
-  // Crée un objet TeacherData à partir d'une Map (venant de Firestore)
   factory TeacherData.fromMap(Map<String, dynamic> map) {
     return TeacherData(
-      nom: map['nom'],
-      sexe: map['sexe'],
-      matricule: map['matricule'],
-      situationSalariale: map['situationSalariale'],
-      anneeEngagement: map['anneeEngagement'],
-      qualification: map['qualification'],
+      nom: map['nom'] as String,
+      sexe: map['sexe'] as String?,
+      matricule: map['matricule'] as String,
+      situationSalariale: map['situationSalariale'] as String?,
+      anneeEngagement: map['anneeEngagement'] as int?,
+      qualification: map['qualification'] as String?,
     );
   }
 }
@@ -60,35 +60,35 @@ class EquipementData {
       'type': type,
       'enBonEtat': enBonEtat,
       'enMauvaisEtat': enMauvaisEtat,
+      'total':
+          enBonEtat +
+          enMauvaisEtat, // Le total est calculé pour un stockage direct
     };
   }
 
   factory EquipementData.fromMap(Map<String, dynamic> map) {
     return EquipementData(
-      type: map['type'],
-      enBonEtat: map['enBonEtat'],
-      enMauvaisEtat: map['enMauvaisEtat'],
+      type: map['type'] as String,
+      enBonEtat: map['enBonEtat'] as int,
+      enMauvaisEtat: map['enMauvaisEtat'] as int,
     );
   }
 }
 
 /// Modèle principal pour le formulaire ST2.
-/// Contient toutes les données collectées.
 class ST2Model {
-  final String? id; // L'ID du document Firestore
-  final String submittedBy; // UID de l'utilisateur
-  final DateTime? submittedAt; // Horodatage de la soumission
+  final String? id;
+  final String submittedBy;
+  final DateTime? submittedAt;
   final String status;
 
-  // Section: Identification
+  // --- Champs du formulaire ---
   final String schoolName;
   final String chefEtablissementName;
   final String? niveauEcole;
   final String adresse;
   final String telephoneChef;
   final String? periode;
-
-  // Section: Localisation
   final String? province;
   final String? provinceEducationnelle;
   final String villeVillage;
@@ -97,22 +97,16 @@ class ST2Model {
   final String refJuridique;
   final String idDinacope;
   final String? statutEtablissement;
-
-  // Section: Informations Générales
   final bool? hasProgrammesOfficiels;
   final bool? hasLatrines;
   final int? latrinesTotal;
   final int? latrinesFilles;
   final bool? hasPrevisionsBudgetaires;
-
-  // Section: Données scolaires (spécifiques au niveau)
   final Map<String, int> classesOrganisees;
   final int totalEnseignants;
   final List<TeacherData> enseignants;
-  final Map<String, Map<String, int>>
-  effectifsEleves; // Ex: {'1ère': {'garcons': 10, 'filles': 12}}
-  final Map<String, Map<String, int>>
-  manuelsDisponibles; // Ex: {'Français': {'1ère': 20, '2ème': 15}}
+  final Map<String, Map<String, int>> effectifsEleves;
+  final Map<String, Map<String, int>> manuelsDisponibles;
   final List<EquipementData> equipements;
 
   ST2Model({
@@ -147,11 +141,10 @@ class ST2Model {
     required this.equipements,
   });
 
-  /// Convertit l'objet ST2Model en une Map pour Firestore.
   Map<String, dynamic> toMap() {
     return {
       'submittedBy': submittedBy,
-      'submittedAt': FieldValue.serverTimestamp(), // Firestore gère la date
+      'submittedAt': FieldValue.serverTimestamp(),
       'status': status,
       'schoolName': schoolName,
       'chefEtablissementName': chefEtablissementName,
@@ -174,58 +167,64 @@ class ST2Model {
       'hasPrevisionsBudgetaires': hasPrevisionsBudgetaires,
       'classesOrganisees': classesOrganisees,
       'totalEnseignants': totalEnseignants,
-      'enseignants': enseignants.map((teacher) => teacher.toMap()).toList(),
+      'enseignants': enseignants.map((t) => t.toMap()).toList(),
       'effectifsEleves': effectifsEleves,
       'manuelsDisponibles': manuelsDisponibles,
-      'equipements': equipements.map((equip) => equip.toMap()).toList(),
+      'equipements': equipements.map((e) => e.toMap()).toList(),
     };
   }
 
-  /// Crée un objet ST2Model à partir d'un DocumentSnapshot de Firestore.
   factory ST2Model.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
-    final data = doc.data()!;
+    final data = doc.data();
+    if (data == null)
+      throw StateError('Document Firestore vide pour l\'ID: ${doc.id}');
+
     return ST2Model(
       id: doc.id,
-      submittedBy: data['submittedBy'],
+      submittedBy: data['submittedBy'] ?? '',
       submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),
-      status: data['status'],
-      schoolName: data['schoolName'],
-      chefEtablissementName: data['chefEtablissementName'],
+      status: data['status'] ?? 'Inconnu',
+      schoolName: data['schoolName'] ?? '',
+      chefEtablissementName: data['chefEtablissementName'] ?? '',
       niveauEcole: data['niveauEcole'],
-      adresse: data['adresse'],
-      telephoneChef: data['telephoneChef'],
+      adresse: data['adresse'] ?? '',
+      telephoneChef: data['telephoneChef'] ?? '',
       periode: data['periode'],
       province: data['province'],
       provinceEducationnelle: data['provinceEducationnelle'],
-      villeVillage: data['villeVillage'],
+      villeVillage: data['villeVillage'] ?? '',
       sousDivision: data['sousDivision'],
       regimeGestion: data['regimeGestion'],
-      refJuridique: data['refJuridique'],
-      idDinacope: data['idDinacope'],
+      refJuridique: data['refJuridique'] ?? '',
+      idDinacope: data['idDinacope'] ?? '',
       statutEtablissement: data['statutEtablissement'],
       hasProgrammesOfficiels: data['hasProgrammesOfficiels'],
       hasLatrines: data['hasLatrines'],
       latrinesTotal: data['latrinesTotal'],
       latrinesFilles: data['latrinesFilles'],
       hasPrevisionsBudgetaires: data['hasPrevisionsBudgetaires'],
-      classesOrganisees: Map<String, int>.from(data['classesOrganisees']),
-      totalEnseignants: data['totalEnseignants'],
+      totalEnseignants: data['totalEnseignants'] ?? 0,
+      classesOrganisees: Map<String, int>.from(data['classesOrganisees'] ?? {}),
       enseignants:
           (data['enseignants'] as List<dynamic>?)
               ?.map((e) => TeacherData.fromMap(e as Map<String, dynamic>))
               .toList() ??
           [],
-      effectifsEleves: Map<String, Map<String, int>>.from(
-        data['effectifsEleves'],
-      ),
-      manuelsDisponibles: Map<String, Map<String, int>>.from(
-        data['manuelsDisponibles'],
-      ),
       equipements:
           (data['equipements'] as List<dynamic>?)
               ?.map((e) => EquipementData.fromMap(e as Map<String, dynamic>))
               .toList() ??
           [],
+      effectifsEleves:
+          (data['effectifsEleves'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, Map<String, int>.from(value as Map)),
+          ) ??
+          {},
+      manuelsDisponibles:
+          (data['manuelsDisponibles'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, Map<String, int>.from(value as Map)),
+          ) ??
+          {},
     );
   }
 }
