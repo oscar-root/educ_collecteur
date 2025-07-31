@@ -1,7 +1,7 @@
 // lib/views/auth/login_view.dart
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // <-- IMPORT NÉCESSAIRE pour FirebaseAuthException
+import 'package:firebase_auth/firebase_auth.dart'; // Nécessaire pour FirebaseAuthException
 import '../../../controllers/auth_controller.dart';
 import '../../../models/user_model.dart';
 import '../../../widgets/custom_button.dart';
@@ -19,7 +19,6 @@ class _LoginViewState extends State<LoginView> {
   final _passwordController = TextEditingController();
   final _authController = AuthController();
   final _formKey = GlobalKey<FormState>();
-
   bool _isLoading = false;
 
   @override
@@ -29,10 +28,9 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
-  /// Gère le processus de connexion, la redirection par rôle et les erreurs spécifiques.
+  /// Gère la connexion et tous les scénarios d'erreur possibles.
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     try {
@@ -42,6 +40,7 @@ class _LoginViewState extends State<LoginView> {
       );
 
       if (user != null && mounted) {
+        // La redirection par rôle se fait ici si tout s'est bien passé
         switch (user.role.toLowerCase()) {
           case 'admin':
             Navigator.pushReplacementNamed(context, '/admin_dashboard');
@@ -56,71 +55,56 @@ class _LoginViewState extends State<LoginView> {
             Navigator.pushReplacementNamed(context, '/chef_service_dashboard');
             break;
           default:
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Votre rôle (${user.role}) ne permet pas l\'accès.',
-                  ),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
+            _showErrorSnackBar(
+              'Votre rôle (${user.role}) n\'est pas reconnu ou ne permet pas l\'accès.',
+            );
         }
-      } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Impossible de récupérer les informations du profil.',
-            ),
-            backgroundColor: Colors.red,
-          ),
-        );
       }
+      // Note : Le cas 'user == null' ne devrait pas arriver car AuthController lève des exceptions.
+      // C'est une sécurité si la méthode login retournait null sans erreur.
     } on FirebaseAuthException catch (e) {
-      // --- GESTION D'ERREURS AMÉLIORÉE ---
-      // Affiche l'erreur exacte dans la console du développeur
-      print("Erreur d'authentification Firebase : ${e.code}");
-
-      String errorMessage = "Une erreur d'authentification est survenue.";
-      // Traduit les codes d'erreur de Firebase en messages clairs pour l'utilisateur
-      if (e.code == 'user-not-found') {
-        errorMessage = 'Aucun compte n\'est associé à cet email.';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = 'Le mot de passe est incorrect.';
-      } else if (e.code == 'invalid-credential' || e.code == 'invalid-email') {
-        // 'invalid-credential' est plus récent et plus général
-        errorMessage = 'L\'email ou le mot de passe est incorrect.';
-      } else if (e.code == 'user-disabled') {
-        errorMessage = 'Ce compte utilisateur a été désactivé.';
+      // --- ATTRAPE LES ERREURS SPÉCIFIQUES À L'AUTHENTIFICATION FIREBASE ---
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+          errorMessage = 'L\'email ou le mot de passe est incorrect.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'Ce compte utilisateur a été désactivé.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Le format de l\'email est invalide.';
+          break;
+        default:
+          errorMessage = 'Une erreur d\'authentification est survenue.';
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.red.shade700,
-          ),
-        );
-      }
+      _showErrorSnackBar(errorMessage);
+      print("Erreur FirebaseAuth: ${e.code}"); // Pour le débogage
     } catch (e) {
-      // Pour toutes les autres erreurs non liées à l'authentification Firebase (ex: réseau)
-      print("Erreur de connexion générale : $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Une erreur inattendue est survenue. Veuillez vérifier votre connexion.',
-            ),
-            backgroundColor: Color.fromARGB(255, 233, 56, 56),
-          ),
-        );
-      }
+      // --- ATTRAPE NOS ERREURS PERSONNALISÉES (BLOQUÉ, ARCHIVÉ, PROFIL INTROUVABLE) ---
+      // Le `e.toString()` récupère le message de notre `throw Exception(...)` dans AuthController.
+      // On nettoie le message pour l'affichage.
+      _showErrorSnackBar(e.toString().replaceFirst('Exception: ', ''));
+      print("Erreur de logique de connexion: $e"); // Pour le débogage
     } finally {
-      // Quoi qu'il arrive, on s'assure de réactiver le bouton et de ne plus afficher le chargement.
       if (mounted) {
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  /// Affiche une SnackBar d'erreur avec un message personnalisé.
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -144,11 +128,10 @@ class _LoginViewState extends State<LoginView> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Icon(
-                      Icons
-                          .lock_person_sharp, // Icône légèrement modifiée pour le style
+                    Icon(
+                      Icons.lock_person_sharp,
                       size: 80,
-                      color: Colors.indigo,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -184,7 +167,7 @@ class _LoginViewState extends State<LoginView> {
                       validator:
                           (value) =>
                               value == null || value.length < 6
-                                  ? 'Le mot de passe doit contenir au moins 6 caractères'
+                                  ? 'Le mot de passe doit faire au moins 6 caractères'
                                   : null,
                     ),
                     Align(

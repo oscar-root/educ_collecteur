@@ -1,15 +1,15 @@
 // lib/views/auth/register_view.dart
 
-import 'package:animate_do/animate_do.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:animate_do/animate_do.dart';
 
-// Assurez-vous que les chemins d'importation sont corrects pour votre projet
 import '../../controllers/auth_controller.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 
 class RegisterView extends StatefulWidget {
+  // Ce paramètre crucial détermine le comportement de la page
   final bool fromAdmin;
 
   const RegisterView({super.key, this.fromAdmin = false});
@@ -20,19 +20,20 @@ class RegisterView extends StatefulWidget {
 
 class _RegisterViewState extends State<RegisterView> {
   final _formKey = GlobalKey<FormState>();
+  final _authController = AuthController();
 
+  // Contrôleurs pour tous les champs
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _fullNameController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _schoolNameController = TextEditingController();
   final _codeEcoleController = TextEditingController();
-  final _phoneController = TextEditingController();
 
-  final AuthController _authController = AuthController();
-
-  String _selectedRole = 'chef';
-  String _selectedGender = 'Masculin';
-  String _selectedNiveau = 'secondaire';
+  // Variables pour les menus déroulants
+  String? _selectedNiveauEcole;
+  String? _selectedGender;
+  String? _selectedRole;
 
   bool _isLoading = false;
 
@@ -41,44 +42,70 @@ class _RegisterViewState extends State<RegisterView> {
     _emailController.dispose();
     _passwordController.dispose();
     _fullNameController.dispose();
+    _phoneController.dispose();
     _schoolNameController.dispose();
     _codeEcoleController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
+  /// Gère l'enregistrement en appelant la bonne méthode du contrôleur.
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final user = await _authController.registerExtended(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        fullName: _fullNameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        schoolName: _schoolNameController.text.trim(),
-        codeEcole: _codeEcoleController.text.trim(),
-        niveauEcole: _selectedNiveau,
-        gender: _selectedGender,
-        role: _selectedRole,
-      );
+      if (widget.fromAdmin) {
+        // --- CAS 1 : L'ADMINISTRATEUR CRÉE UN COMPTE ---
+        await _authController.createUserByAdmin(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          fullName: _fullNameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          schoolName: _schoolNameController.text.trim(),
+          codeEcole: _codeEcoleController.text.trim(),
+          niveauEcole: _selectedNiveauEcole!,
+          gender: _selectedGender!,
+          role: _selectedRole!,
+        );
+      } else {
+        // --- CAS 2 : UN NOUVEL UTILISATEUR S'INSCRIT ---
+        await _authController.registerExtended(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          fullName: _fullNameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          schoolName: _schoolNameController.text.trim(),
+          codeEcole: _codeEcoleController.text.trim(),
+          niveauEcole: _selectedNiveauEcole!,
+          gender: _selectedGender!,
+          role:
+              'chef', // Le rôle est 'chef' par défaut pour les inscriptions standard
+        );
+      }
 
-      if (user != null && mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Compte pour ${user.email} créé avec succès !'),
+          const SnackBar(
+            content: Text("Utilisateur créé avec succès !"),
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context);
+        if (widget.fromAdmin) {
+          Navigator.pop(context); // L'admin retourne à la page précédente
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur : ${e.toString()}'),
+            content: Text("Erreur : ${e.toString()}"),
             backgroundColor: Colors.red,
           ),
         );
@@ -92,21 +119,13 @@ class _RegisterViewState extends State<RegisterView> {
 
   @override
   Widget build(BuildContext context) {
-    final roles =
-        widget.fromAdmin ? ['admin', 'chef_service', 'chef'] : ['chef'];
-    if (!widget.fromAdmin) {
-      _selectedRole = 'chef';
-    }
+    final pageTitle =
+        widget.fromAdmin ? "Ajouter un Utilisateur" : "Créer un Compte";
+    final buttonTitle =
+        widget.fromAdmin ? "Enregistrer l'Utilisateur" : "Créer mon Compte";
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Créer un Compte'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        iconTheme: IconThemeData(
-          color: Theme.of(context).textTheme.bodyLarge?.color,
-        ),
-      ),
+      appBar: AppBar(title: Text(pageTitle)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Form(
@@ -114,34 +133,6 @@ class _RegisterViewState extends State<RegisterView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              FadeInDown(
-                child: const Icon(
-                  Icons.person_add_outlined,
-                  size: 60,
-                  color: Colors.indigo,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FadeInUp(
-                child: Text(
-                  "Inscription",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              FadeInUp(
-                delay: const Duration(milliseconds: 200),
-                child: Text(
-                  "Veuillez remplir tous les champs pour créer le nouvel utilisateur.",
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
-              const SizedBox(height: 32),
-
               _buildSectionCard(
                 title: "Informations Personnelles",
                 children: [
@@ -152,7 +143,6 @@ class _RegisterViewState extends State<RegisterView> {
                     validator: (v) => v!.isEmpty ? 'Champ requis' : null,
                   ),
                   const SizedBox(height: 16),
-                  // Ce champ utilise maintenant correctement le 'inputFormatters' qui a été ajouté à CustomTextField
                   CustomTextField(
                     controller: _phoneController,
                     labelText: 'Numéro de téléphone',
@@ -164,14 +154,12 @@ class _RegisterViewState extends State<RegisterView> {
                   const SizedBox(height: 16),
                   _buildDropdown(
                     value: _selectedGender,
-                    label: 'Genre',
-                    icon: Icons.wc_outlined,
+                    hint: 'Genre',
                     items: ['Masculin', 'Féminin'],
-                    onChanged: (val) => setState(() => _selectedGender = val!),
+                    onChanged: (val) => setState(() => _selectedGender = val),
                   ),
                 ],
               ),
-
               _buildSectionCard(
                 title: "Informations sur l'Établissement",
                 children: [
@@ -180,25 +168,24 @@ class _RegisterViewState extends State<RegisterView> {
                     labelText: "Nom de l’établissement",
                     icon: Icons.apartment_outlined,
                     validator: (v) => v!.isEmpty ? 'Champ requis' : null,
-                  ),
+                  ), // <-- CORRIGÉ
                   const SizedBox(height: 16),
                   CustomTextField(
                     controller: _codeEcoleController,
                     labelText: 'Code école',
                     icon: Icons.pin_outlined,
                     validator: (v) => v!.isEmpty ? 'Champ requis' : null,
-                  ),
+                  ), // <-- CORRIGÉ
                   const SizedBox(height: 16),
                   _buildDropdown(
-                    value: _selectedNiveau,
-                    label: 'Niveau d’école',
-                    icon: Icons.school_outlined,
-                    items: ['maternel', 'primaire', 'secondaire'],
-                    onChanged: (val) => setState(() => _selectedNiveau = val!),
+                    value: _selectedNiveauEcole,
+                    hint: 'Niveau d’école',
+                    items: ['Maternel', 'Primaire', 'Secondaire'],
+                    onChanged:
+                        (val) => setState(() => _selectedNiveauEcole = val),
                   ),
                 ],
               ),
-
               _buildSectionCard(
                 title: "Identifiants de Connexion",
                 children: [
@@ -229,24 +216,19 @@ class _RegisterViewState extends State<RegisterView> {
                   if (widget.fromAdmin)
                     _buildDropdown(
                       value: _selectedRole,
-                      label: 'Rôle',
-                      icon: Icons.verified_user_outlined,
-                      items: roles,
-                      onChanged: (val) => setState(() => _selectedRole = val!),
+                      hint: 'Rôle de l\'utilisateur',
+                      items: ['admin', 'directeur', 'chef_service', 'chef'],
+                      onChanged: (val) => setState(() => _selectedRole = val),
                     ),
                 ],
               ),
-
               const SizedBox(height: 32),
-
               CustomButton(
-                text: _isLoading ? 'Création en cours...' : 'Créer le compte',
+                text: _isLoading ? 'Enregistrement en cours...' : buttonTitle,
                 icon: Icons.person_add_alt_1,
                 onPressed: _isLoading ? null : _handleRegister,
               ),
-
               const SizedBox(height: 20),
-
               if (!widget.fromAdmin)
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -292,14 +274,22 @@ class _RegisterViewState extends State<RegisterView> {
   }
 
   Widget _buildDropdown({
-    required String value,
-    required String label,
-    required IconData icon,
+    required String? value,
+    required String hint,
     required List<String> items,
-    required void Function(String?) onChanged,
+    required ValueChanged<String?> onChanged,
   }) {
     return DropdownButtonFormField<String>(
       value: value,
+      hint: Text(hint),
+      decoration: InputDecoration(
+        labelText: hint,
+        border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 12,
+        ),
+      ),
       items:
           items
               .map(
@@ -310,15 +300,8 @@ class _RegisterViewState extends State<RegisterView> {
               )
               .toList(),
       onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: const OutlineInputBorder(),
-        contentPadding: const EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 12,
-        ),
-      ),
+      validator:
+          (value) => value == null ? 'Veuillez sélectionner une option' : null,
     );
   }
 }

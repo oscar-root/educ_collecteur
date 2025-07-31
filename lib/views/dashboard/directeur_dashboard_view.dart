@@ -1,5 +1,14 @@
 // lib/views/dashboard/directeur_dashboard_view.dart
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import 'package:educ_collecteur/controllers/auth_controller.dart';
+import 'package:educ_collecteur/providers/theme_provider.dart';
+
+// Importez les pages réelles qui seront affichées
+import 'saved_reports_page.dart';
+import 'statistics_page.dart';
 
 class DirecteurDashboardView extends StatefulWidget {
   const DirecteurDashboardView({super.key});
@@ -9,88 +18,215 @@ class DirecteurDashboardView extends StatefulWidget {
 }
 
 class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
-  int _selectedIndex = 0;
+  final AuthController _authController = AuthController();
+  int _selectedIndex = 0; // Index pour la BottomNavigationBar
 
-  final List<Widget> _pages = [
-    const _AccueilDirecteur(),
-    Placeholder(), // Visualiser les rapports
-    Placeholder(), // Statistiques interactives (charts)
-    Placeholder(), // Impression ou téléchargement
+  // --- MISE À JOUR DE LA LISTE DES PAGES ---
+  // On utilise maintenant les vraies pages que vous avez créées.
+  static final List<Widget> _pages = <Widget>[
+    const _AccueilDirecteurContent(), // Onglet 0: Accueil
+    const SavedReportsPage(), // Onglet 1: Rapports Enregistrés
+    const StatisticsPage(), // Onglet 2: Statistiques
   ];
+
+  // Titres correspondants pour l'AppBar
+  static const List<String> _pageTitles = [
+    'Tableau de Bord Directeur',
+    'Rapports Enregistrés',
+    'Statistiques Globales',
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: _buildSidebar(),
       appBar: AppBar(
-        title: const Text('Espace Directeur – Supervision'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          _pageTitles[_selectedIndex],
+        ), // Le titre change avec la page
+        actions: [
+          // On ajoute un bouton pour ouvrir le drawer des paramètres/déconnexion
+          Builder(
+            builder:
+                (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                  tooltip: 'Menu',
+                ),
+          ),
+        ],
       ),
-      body: _pages[_selectedIndex],
+      // Le Drawer est maintenant un EndDrawer pour ne pas interférer avec le bouton "retour"
+      endDrawer: _buildSettingsDrawer(context),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
+      // --- AJOUT DE LA BOTTOMNAVIGATIONBAR ---
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Accueil',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_shared_outlined),
+            activeIcon: Icon(Icons.folder_shared),
+            label: 'Rapports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            activeIcon: Icon(Icons.bar_chart),
+            label: 'Stats',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        // Les couleurs s'adaptent au thème
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Colors.grey,
+        showUnselectedLabels: false,
+      ),
     );
   }
 
-  Drawer _buildSidebar() {
+  /// Construit un Drawer simplifié pour les paramètres et la déconnexion.
+  Drawer _buildSettingsDrawer(BuildContext context) {
     return Drawer(
-      child: Column(
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(color: Colors.teal),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: const Text(
+                  "Directeur Provincial",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                accountEmail: Text(
+                  _authController.auth.currentUser?.email ??
+                      'non.connecte@email.com',
+                ),
+                currentAccountPicture: CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
                   child: Icon(
-                    Icons.supervisor_account,
+                    Icons.school,
                     size: 40,
-                    color: Colors.teal,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
-                SizedBox(height: 12),
-                Text(
-                  "Directeur Provincial H-L 1",
-                  style: TextStyle(color: Colors.white, fontSize: 20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
-                Text(
-                  "direction@educ.nc",
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  "Options",
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
+              ),
+              ExpansionTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text("Paramètres"),
+                children: [
+                  SwitchListTile(
+                    title: const Text("Mode Sombre"),
+                    secondary: Icon(
+                      themeProvider.themeMode == ThemeMode.dark
+                          ? Icons.dark_mode_outlined
+                          : Icons.light_mode_outlined,
+                    ),
+                    value: themeProvider.themeMode == ThemeMode.dark,
+                    onChanged: (value) {
+                      Provider.of<ThemeProvider>(
+                        context,
+                        listen: false,
+                      ).toggleTheme(value);
+                    },
+                  ),
+                ],
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                title: const Text(
+                  'Déconnexion',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+                onTap: () async {
+                  await _authController.signOut();
+                  if (mounted) {
+                    Navigator.of(
+                      context,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Contenu de la page d'accueil du Directeur
+class _AccueilDirecteurContent extends StatelessWidget {
+  const _AccueilDirecteurContent();
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // --- EMOJI RETIRÉ ---
+          Text(
+            "Bienvenue, Directeur !",
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-          _buildDrawerItem(
-            icon: Icons.dashboard_outlined,
-            label: 'Accueil',
-            index: 0,
+          const SizedBox(height: 8),
+          Text(
+            "Supervisez et analysez les données de votre province.",
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
           ),
-          _buildDrawerItem(
-            icon: Icons.folder_shared,
-            label: 'Consulter les rapports',
-            index: 1,
-          ),
-          _buildDrawerItem(
-            icon: Icons.bar_chart_outlined,
-            label: 'Statistiques interactives',
-            index: 2,
-          ),
-          _buildDrawerItem(
-            icon: Icons.print_outlined,
-            label: 'Imprimer / Télécharger',
-            index: 3,
-          ),
-          const Spacer(),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text(
-              'Déconnexion',
-              style: TextStyle(color: Colors.redAccent),
-            ),
+          const SizedBox(height: 24),
+
+          _buildDashboardCard(
+            context: context,
+            icon: Icons.folder_shared_outlined,
+            title: 'Consulter les Rapports',
+            subtitle: 'Accédez à tous les rapports générés par les services.',
             onTap: () {
-              // TODO: Déconnexion
-              Navigator.pop(context);
+              // Cette carte n'est plus nécessaire car c'est un onglet
+              // Mais on peut la garder comme raccourci
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Accédez via l'onglet 'Rapports' en bas."),
+                ),
+              );
+            },
+          ),
+          _buildDashboardCard(
+            context: context,
+            icon: Icons.bar_chart_outlined,
+            title: 'Statistiques Interactives',
+            subtitle: 'Visualisez les données clés sous forme de graphiques.',
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Accédez via l'onglet 'Stats' en bas."),
+                ),
+              );
             },
           ),
         ],
@@ -98,81 +234,50 @@ class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
     );
   }
 
-  ListTile _buildDrawerItem({
-    required IconData icon,
-    required String label,
-    required int index,
-  }) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.teal),
-      title: Text(label),
-      selected: _selectedIndex == index,
-      selectedTileColor: Colors.teal.shade50,
-      onTap: () {
-        setState(() => _selectedIndex = index);
-        Navigator.pop(context); // Ferme le Drawer
-      },
-    );
-  }
-}
-
-class _AccueilDirecteur extends StatelessWidget {
-  const _AccueilDirecteur();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          "Bienvenue Directeur 👨‍💼",
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 20),
-
-        _dashboardCard(
-          icon: Icons.folder_shared,
-          title: 'Visualiser les rapports ST2',
-          subtitle: 'Tous les rapports soumis par les chefs de service',
-          onTap: () {
-            // Naviguer vers la vue de tous les rapports
-          },
-        ),
-        _dashboardCard(
-          icon: Icons.bar_chart,
-          title: 'Statistiques interactives',
-          subtitle: 'Visualiser les données des écoles sous forme graphique',
-          onTap: () {
-            // Aller vers les charts dynamiques
-          },
-        ),
-        _dashboardCard(
-          icon: Icons.print,
-          title: 'Imprimer ou exporter',
-          subtitle: 'Télécharger ou imprimer les rapports ST2 consolidés',
-          onTap: () {
-            // Aller vers impression PDF/export
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _dashboardCard({
+  /// Construit une carte cliquable pour le tableau de bord
+  Widget _buildDashboardCard({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return Card(
-      elevation: 4,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ListTile(
-        leading: Icon(icon, size: 34, color: Colors.teal),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      elevation: 2,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Icon(icon, size: 40, color: theme.colorScheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            ],
+          ),
+        ),
       ),
     );
   }

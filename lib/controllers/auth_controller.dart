@@ -1,50 +1,57 @@
 // lib/controllers/auth_controller.dart
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import '../models/user_model.dart'; // Assurez-vous que le chemin vers votre modèle est correct
 
 class AuthController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- CORRECTION APPLIQUÉE ICI ---
-  /// Getter public pour accéder à l'instance FirebaseAuth de manière sécurisée.
-  /// Cela permet à d'autres parties du code (comme les vues) de lire des informations
-  /// sur l'utilisateur actuel (ex: `_authController.auth.currentUser`).
+  /// Getter public pour un accès en lecture seule à l'instance FirebaseAuth.
   FirebaseAuth get auth => _auth;
-  // ---------------------------------
 
-  /// **NOUVELLE MÉTHODE COMBINÉE**
-  /// Tente de connecter un utilisateur, et si la connexion réussit,
-  /// récupère immédiatement ses données depuis Firestore et retourne un UserModel.
-  /// C'est la méthode que la vue de connexion doit appeler.
+  /// Connecte un utilisateur et vérifie son statut (archivé, bloqué).
   Future<UserModel?> login({
     required String email,
     required String password,
   }) async {
-    // 1. Authentifier l'utilisateur
-    await _auth.signInWithEmailAndPassword(email: email, password: password);
-
-    // 2. Si l'authentification réussit (pas d'exception levée),
-    //    récupérer les données du modèle utilisateur.
-    return await getCurrentUserModel();
-  }
-
-  // La méthode 'signIn' peut être gardée pour un usage interne ou supprimée si non utilisée.
-  // Pour plus de clarté, nous la gardons mais notre vue utilisera 'login'.
-  Future<User?> signIn({
-    required String email,
-    required String password,
-  }) async {
-    final result = await _auth.signInWithEmailAndPassword(
+    UserCredential userCredential = await _auth.signInWithEmailAndPassword(
       email: email,
       password: password,
     );
-    return result.user;
+    final user = userCredential.user;
+    if (user == null)
+      throw Exception("Utilisateur non trouvé après l'authentification.");
+
+    final doc = await _db.collection('users').doc(user.uid).get();
+    if (!doc.exists || doc.data() == null) {
+      await _auth.signOut();
+      throw Exception(
+        "Profil utilisateur introuvable. Veuillez contacter l'administrateur.",
+      );
+    }
+
+    final userModel = UserModel.fromMap(doc.data()!);
+
+    if (userModel.archived) {
+      await _auth.signOut();
+      throw Exception(
+        "Ce compte a été archivé. Veuillez contacter l'administrateur.",
+      );
+    }
+    if (userModel.isBlocked) {
+      await _auth.signOut();
+      throw Exception(
+        "Votre compte est actuellement bloqué. Veuillez contacter l'administrateur.",
+      );
+    }
+
+    return userModel;
   }
 
-  /// Enregistre un nouvel utilisateur avec toutes les informations du formulaire.
+  /// Enregistre un nouvel utilisateur (inscription standard) et le connecte.
   Future<User?> registerExtended({
     required String email,
     required String password,
@@ -61,26 +68,94 @@ class AuthController {
       password: password,
     );
     final user = result.user;
-    if (user == null) {
-      throw Exception("La création de l'utilisateur a échoué.");
-    }
-    final userData = {
-      'uid': user.uid,
-      'email': email,
-      'fullName': fullName,
-      'phone': phone,
-      'schoolName': schoolName,
-      'codeEcole': codeEcole,
-      'niveauEcole': niveauEcole.toLowerCase(),
-      'gender': gender,
-      'role': role.toLowerCase(),
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-    await _db.collection('users').doc(user.uid).set(userData);
+    if (user == null)
+      throw Exception("La création de l'utilisateur (Auth) a échoué.");
+
+    final newUserModel = UserModel(
+      uid: user.uid,
+      email: email,
+      fullName: fullName,
+      phone: phone,
+      schoolName: schoolName,
+      codeEcole: codeEcole,
+      niveauEcole: niveauEcole.toLowerCase(),
+      gender: gender,
+      role: role.toLowerCase(),
+    );
+
+    await _db.collection('users').doc(user.uid).set(newUserModel.toMap());
     return user;
   }
 
-  /// Récupère les données de l'utilisateur actuellement connecté.
+  /// Crée un nouvel utilisateur (par un admin) sans déconnecter l'admin.
+  Future<void> createUserByAdmin({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phone,
+    required String schoolName,
+    required String codeEcole,
+    required String niveauEcole,
+    required String gender,
+    required String role,
+  }) async {
+    final tempAppName =
+        'temp_registration_${DateTime.now().millisecondsSinceEpoch}';
+    FirebaseApp tempApp = await Firebase.initializeApp(
+      name: tempAppName,
+      options: Firebase.app().options,
+    );
+    FirebaseAuth tempAuth = FirebaseAuth.instanceFor(app: tempApp);
+
+    try {
+      UserCredential newUserCredential = await tempAuth
+          .createUserWithEmailAndPassword(email: email, password: password);
+      final newUser = newUserCredential.user;
+      if (newUser == null)
+        throw Exception("La création de l'utilisateur (Auth) a échoué.");
+
+      final newUserModel = UserModel(
+        uid: newUser.uid,
+        email: email,
+        fullName: fullName,
+        phone: phone,
+        schoolName: schoolName,
+        codeEcole: codeEcole,
+        niveauEcole: niveauEcole.toLowerCase(),
+        gender: gender,
+        role: role.toLowerCase(),
+      );
+
+      await _db.collection('users').doc(newUser.uid).set(newUserModel.toMap());
+    } catch (e) {
+      rethrow;
+    } finally {
+      await tempApp.delete();
+    }
+  }
+
+  /// --- NOUVELLE MÉTHODE POUR LA SUPPRESSION DÉFINITIVE ---
+  /// Supprime le document d'un utilisateur dans Firestore.
+  /// NOTE : Cette méthode ne supprime PAS l'utilisateur de Firebase Authentication.
+  /// La suppression complète d'un autre utilisateur nécessite des privilèges d'administrateur
+  /// via l'Admin SDK (côté serveur, ex: Cloud Functions) pour des raisons de sécurité.
+  /// La suppression du document Firestore est l'action la plus importante côté client.
+  Future<void> deleteUserAccount(UserModel userToDelete) async {
+    try {
+      // Étape 1 : Supprimer le document de l'utilisateur dans Firestore
+      await _db.collection('users').doc(userToDelete.uid).delete();
+
+      // Étape 2 (Optionnelle, via Cloud Function) :
+      // Ici, on appellerait une fonction Cloud qui, elle, supprimerait l'utilisateur
+      // de Firebase Authentication en utilisant l'Admin SDK.
+      // ex: https.onCall((data, context) => { admin.auth().deleteUser(data.uid) });
+    } catch (e) {
+      // Propage l'erreur pour l'afficher dans la vue.
+      rethrow;
+    }
+  }
+
+  /// Récupère le profil Firestore de l'utilisateur actuellement connecté.
   Future<UserModel?> getCurrentUserModel() async {
     final user = _auth.currentUser;
     if (user != null) {

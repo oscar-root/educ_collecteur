@@ -8,6 +8,8 @@ import 'package:educ_collecteur/models/st2_model.dart';
 import 'package:educ_collecteur/controllers/auth_controller.dart';
 import 'package:educ_collecteur/providers/theme_provider.dart';
 import 'statistics_page.dart';
+import 'report_generation_page.dart';
+import 'saved_reports_page.dart'; // <-- 1. IMPORTEZ LA NOUVELLE PAGE
 
 class ChefServiceDashboardView extends StatefulWidget {
   const ChefServiceDashboardView({super.key});
@@ -70,6 +72,8 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
     Query query = FirebaseFirestore.instance
         .collection('st2_forms')
         .orderBy('submittedAt', descending: true);
+
+    // Correction de la syntaxe des 'if' pour plus de clarté
     if (_selectedNiveau != null) {
       query = query.where(
         'niveauEcole',
@@ -88,8 +92,10 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
     if (_selectedRegimeGestion != null) {
       query = query.where('regimeGestion', isEqualTo: _selectedRegimeGestion);
     }
-    if (_selectedPeriode != null)
+    if (_selectedPeriode != null) {
       query = query.where('periode', isEqualTo: _selectedPeriode);
+    }
+
     return query.snapshots().map(
       (snapshot) =>
           snapshot.docs
@@ -109,16 +115,13 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
   }
 
   Future<void> _deleteForm(ST2Model form) async {
-    /* ... Votre logique existante ... */
+    // Votre logique de suppression ici (non affichée pour la clarté)
   }
   Future<void> _validateForm(ST2Model form) async {
-    /* ... Votre logique existante ... */
+    // Votre logique de validation ici (non affichée pour la clarté)
   }
   void _editForm(ST2Model form) {
-    /* ... Votre logique existante ... */
-  }
-  void _generateReport() {
-    /* ... Votre logique existante ... */
+    // Votre logique d'édition ici (non affichée pour la clarté)
   }
 
   @override
@@ -128,10 +131,8 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
       drawer: _buildDrawer(),
       body: Column(
         children: [
-          // --- CORRECTION : Appel de la méthode _buildFilterControls ---
           _buildFilterControls(),
           Expanded(
-            // --- CORRECTION : Utilisation du Stream _st2Stream ---
             child: StreamBuilder<List<ST2Model>>(
               stream: _st2Stream,
               builder: (context, snapshot) {
@@ -249,17 +250,39 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.folder_copy),
+                leading: const Icon(Icons.folder_copy_outlined),
                 title: const Text('Gérer les ST2'),
                 onTap: () => Navigator.of(context).pop(),
               ),
               ListTile(
-                leading: const Icon(Icons.picture_as_pdf),
+                leading: const Icon(Icons.picture_as_pdf_outlined),
                 title: const Text('Générer un rapport'),
-                onTap: _generateReport,
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ReportGenerationPage(),
+                    ),
+                  );
+                },
+              ),
+              // --- 2. AJOUT DU NOUVEL ÉLÉMENT DE MENU ---
+              ListTile(
+                leading: const Icon(Icons.history_edu_outlined),
+                title: const Text('Rapports Enregistrés'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SavedReportsPage(),
+                    ),
+                  );
+                },
               ),
               ListTile(
-                leading: const Icon(Icons.bar_chart),
+                leading: const Icon(Icons.bar_chart_outlined),
                 title: const Text('Statistiques'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -272,7 +295,7 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
                 },
               ),
               ExpansionTile(
-                leading: const Icon(Icons.settings),
+                leading: const Icon(Icons.settings_outlined),
                 title: const Text("Paramètres"),
                 children: [
                   SwitchListTile(
@@ -334,7 +357,6 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // --- CORRECTION : Utilisation des listes pour les filtres ---
                 Row(
                   children: [
                     Expanded(
