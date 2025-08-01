@@ -87,10 +87,10 @@ class _SplashScreenState extends State<SplashScreen>
                   Text(
                     'EDUC.NC H-L1',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
                   ),
                   const SizedBox(height: 16),
                   const Text(

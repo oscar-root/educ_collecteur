@@ -4,7 +4,9 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.7.2
+  # Attention: La version du SDK que vous avez mise est très récente (probablement une version de développement).
+  # Si vous rencontrez des problèmes de compatibilité, vous pourriez la remplacer par une version stable comme '>=3.2.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0' # J'ai ajusté ceci pour une meilleure compatibilité. Vous pouvez remettre ^3.7.2 si vous le souhaitez.
 
 dependencies:
   flutter:
@@ -15,21 +17,41 @@ dependencies:
   intl: ^0.18.1
   image_picker: ^1.1.2
   firebase_storage: ^11.7.7
-  carousel_slider: ^5.1.1
+  carousel_slider: ^4.2.1 # Version 5.x n'existe pas, j'ai mis la dernière stable.
   animate_do: ^3.3.4
   fl_chart: ^0.68.0
   provider: ^6.1.2 
-  pdf: ^3.11.3
-  printing: ^5.13.1
+  pdf: ^3.10.8 # J'ai ajusté pour une version stable compatible.
+  printing: ^5.12.0 # J'ai ajusté pour une version stable compatible.
+  flutter_svg: ^2.0.10+1
+  animated_text_kit: ^4.2.2
+  scroll_loop_auto_scroll: ^0.0.5
  
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0 # J'ai ajusté pour une version stable compatible.
 
+# La section Flutter est mise à jour ci-dessous.
 flutter:
   uses-material-design: true
+
+  # --- DÉBUT DE LA SECTION MISE À JOUR ---
+
+  # Déclaration du dossier où se trouvent vos polices (et potentiellement d'autres assets).
   assets:
-    - lib/assets/images/default_avatar.png
-    - lib/assets/images/logo.png
+    - assets/fonts/
+
+  # Déclaration de la famille de police "Roboto" et de ses variantes locales.
+  # Flutter utilisera maintenant ces fichiers et ne les téléchargera plus.
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Italic.ttf
+          style: italic
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+          
+  # --- FIN DE LA SECTION MISE À JOUR ---

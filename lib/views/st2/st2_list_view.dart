@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-
 // --- IMPORTS DE VOTRE PROJET ---
 import 'package:educ_collecteur/models/st2_model.dart';
 // La ligne suivante est maintenant active pour la navigation
@@ -54,12 +53,11 @@ class _ST2ListViewState extends State<ST2ListView> {
         "DEBUG: Requête sur la collection 'st2_forms' avec le filtre 'submittedBy'.",
       );
 
-      final querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('st2_forms')
-              .where('submittedBy', isEqualTo: _currentUser!.uid)
-              .orderBy('submittedAt', descending: true)
-              .get();
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('st2_forms')
+          .where('submittedBy', isEqualTo: _currentUser!.uid)
+          .orderBy('submittedAt', descending: true)
+          .get();
 
       // AFFICHE LE NOMBRE DE DOCUMENTS TROUVÉS. C'EST LA LIGNE LA PLUS IMPORTANTE !
       print(
@@ -138,122 +136,117 @@ class _ST2ListViewState extends State<ST2ListView> {
           ),
         ],
       ),
-      body:
-          _currentUser == null
-              ? const Center(child: Text("Veuillez vous connecter."))
-              : FutureBuilder<List<ST2Model>>(
-                future: _formsFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError ||
-                      !snapshot.hasData ||
-                      snapshot.data!.isEmpty) {
-                    return RefreshIndicator(
-                      onRefresh: _refreshForms,
-                      child: ListView(
-                        children: const [
-                          Padding(
-                            padding: EdgeInsets.only(top: 150.0),
-                            child: Center(
-                              child: Text(
-                                "Aucun formulaire soumis pour le moment.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  final forms = snapshot.data!;
+      body: _currentUser == null
+          ? const Center(child: Text("Veuillez vous connecter."))
+          : FutureBuilder<List<ST2Model>>(
+              future: _formsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError ||
+                    !snapshot.hasData ||
+                    snapshot.data!.isEmpty) {
                   return RefreshIndicator(
                     onRefresh: _refreshForms,
-                    child: ListView.builder(
-                      padding: const EdgeInsets.all(8.0),
-                      itemCount: forms.length,
-                      itemBuilder: (context, index) {
-                        final form = forms[index];
-                        final submissionDate =
-                            form.submittedAt != null
-                                ? DateFormat(
-                                  'dd/MM/yyyy à HH:mm',
-                                  'fr_FR',
-                                ).format(form.submittedAt!)
-                                : 'Date inconnue';
-
-                        return Card(
-                          elevation: 3,
-                          margin: const EdgeInsets.symmetric(
-                            vertical: 8.0,
-                            horizontal: 4.0,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12,
-                              horizontal: 16,
-                            ),
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.indigo.shade100,
-                              child: Text(
-                                form.niveauEcole
-                                        ?.substring(0, 1)
-                                        .toUpperCase() ??
-                                    '?',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo,
-                                ),
+                    child: ListView(
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.only(top: 150.0),
+                          child: Center(
+                            child: Text(
+                              "Aucun formulaire soumis pour le moment.",
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 17,
+                                color: Colors.grey,
                               ),
                             ),
-                            title: Text(
-                              form.schoolName,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 5.0),
-                              child: Text(
-                                'Période: ${form.periode ?? 'N/A'}\nSoumis le: $submissionDate',
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  height: 1.5,
-                                ),
-                              ),
-                            ),
-                            trailing: const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                            onTap: () {
-                              // --- NAVIGATION VERS LA PAGE DE DÉTAILS ---
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => ST2DetailView(form: form),
-                                ),
-                              );
-                            },
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
                   );
-                },
-              ),
+                }
+
+                final forms = snapshot.data!;
+                return RefreshIndicator(
+                  onRefresh: _refreshForms,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    itemCount: forms.length,
+                    itemBuilder: (context, index) {
+                      final form = forms[index];
+                      final submissionDate = form.submittedAt != null
+                          ? DateFormat(
+                              'dd/MM/yyyy à HH:mm',
+                              'fr_FR',
+                            ).format(form.submittedAt!)
+                          : 'Date inconnue';
+
+                      return Card(
+                        elevation: 3,
+                        margin: const EdgeInsets.symmetric(
+                          vertical: 8.0,
+                          horizontal: 4.0,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 12,
+                            horizontal: 16,
+                          ),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.indigo.shade100,
+                            child: Text(
+                              form.niveauEcole?.substring(0, 1).toUpperCase() ??
+                                  '?',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.indigo,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            form.schoolName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 5.0),
+                            child: Text(
+                              'Période: ${form.periode ?? 'N/A'}\nSoumis le: $submissionDate',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                          trailing: const Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                          onTap: () {
+                            // --- NAVIGATION VERS LA PAGE DE DÉTAILS ---
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ST2DetailView(form: form),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
     );
   }
 }

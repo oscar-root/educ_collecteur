@@ -47,9 +47,9 @@ class ST2DetailView extends StatelessWidget {
                   "Date de soumission",
                   form.submittedAt != null
                       ? DateFormat(
-                        'dd/MM/yyyy à HH:mm',
-                        'fr_FR',
-                      ).format(form.submittedAt!)
+                          'dd/MM/yyyy à HH:mm',
+                          'fr_FR',
+                        ).format(form.submittedAt!)
                       : 'N/A',
                 ),
               ],
@@ -108,46 +108,45 @@ class ST2DetailView extends StatelessWidget {
             // --- Section Personnel Enseignant ---
             _buildSectionCard(
               title: "Personnel Enseignant (${form.totalEnseignants})",
-              children:
-                  form.enseignants.isEmpty
-                      ? [const Text("Aucun enseignant renseigné.")]
-                      : form.enseignants.map((teacher) {
-                        return Container(
-                          padding: const EdgeInsets.all(12),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey.shade300),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                teacher.nom,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.indigo,
-                                ),
+              children: form.enseignants.isEmpty
+                  ? [const Text("Aucun enseignant renseigné.")]
+                  : form.enseignants.map((teacher) {
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              teacher.nom,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.indigo,
                               ),
-                              const Divider(),
-                              _buildDetailRow("Sexe", teacher.sexe),
-                              _buildDetailRow("Matricule", teacher.matricule),
-                              _buildDetailRow(
-                                "Situation salariale",
-                                teacher.situationSalariale,
-                              ),
-                              _buildDetailRow(
-                                "Année d'engagement",
-                                teacher.anneeEngagement?.toString(),
-                              ),
-                              _buildDetailRow(
-                                "Qualification",
-                                teacher.qualification,
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                            ),
+                            const Divider(),
+                            _buildDetailRow("Sexe", teacher.sexe),
+                            _buildDetailRow("Matricule", teacher.matricule),
+                            _buildDetailRow(
+                              "Situation salariale",
+                              teacher.situationSalariale,
+                            ),
+                            _buildDetailRow(
+                              "Année d'engagement",
+                              teacher.anneeEngagement?.toString(),
+                            ),
+                            _buildDetailRow(
+                              "Qualification",
+                              teacher.qualification,
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
             ),
 
             // --- Section Effectifs des élèves ---
@@ -177,20 +176,19 @@ class ST2DetailView extends StatelessWidget {
                       numeric: true,
                     ),
                   ],
-                  rows:
-                      form.effectifsEleves.entries.map((entry) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(entry.key)),
-                            DataCell(
-                              Text(entry.value['garcons']?.toString() ?? '0'),
-                            ),
-                            DataCell(
-                              Text(entry.value['filles']?.toString() ?? '0'),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                  rows: form.effectifsEleves.entries.map((entry) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(entry.key)),
+                        DataCell(
+                          Text(entry.value['garcons']?.toString() ?? '0'),
+                        ),
+                        DataCell(
+                          Text(entry.value['filles']?.toString() ?? '0'),
+                        ),
+                      ],
+                    );
+                  }).toList(),
                 ),
               ],
             ),
@@ -222,16 +220,15 @@ class ST2DetailView extends StatelessWidget {
                       numeric: true,
                     ),
                   ],
-                  rows:
-                      form.equipements.map((equip) {
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(equip.type)),
-                            DataCell(Text(equip.enBonEtat.toString())),
-                            DataCell(Text(equip.enMauvaisEtat.toString())),
-                          ],
-                        );
-                      }).toList(),
+                  rows: form.equipements.map((equip) {
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(equip.type)),
+                        DataCell(Text(equip.enBonEtat.toString())),
+                        DataCell(Text(equip.enMauvaisEtat.toString())),
+                      ],
+                    );
+                  }).toList(),
                 ),
               ],
             ),

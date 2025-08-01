@@ -148,7 +148,9 @@ class _RegisterViewState extends State<RegisterView> {
                     labelText: 'Numéro de téléphone',
                     icon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     validator: (v) => v!.isEmpty ? 'Numéro requis' : null,
                   ),
                   const SizedBox(height: 16),
@@ -181,8 +183,8 @@ class _RegisterViewState extends State<RegisterView> {
                     value: _selectedNiveauEcole,
                     hint: 'Niveau d’école',
                     items: ['Maternel', 'Primaire', 'Secondaire'],
-                    onChanged:
-                        (val) => setState(() => _selectedNiveauEcole = val),
+                    onChanged: (val) =>
+                        setState(() => _selectedNiveauEcole = val),
                   ),
                 ],
               ),
@@ -194,11 +196,8 @@ class _RegisterViewState extends State<RegisterView> {
                     labelText: 'Email',
                     icon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
-                    validator:
-                        (v) =>
-                            v == null || !v.contains('@')
-                                ? 'Email invalide'
-                                : null,
+                    validator: (v) =>
+                        v == null || !v.contains('@') ? 'Email invalide' : null,
                   ),
                   const SizedBox(height: 16),
                   CustomTextField(
@@ -206,11 +205,9 @@ class _RegisterViewState extends State<RegisterView> {
                     labelText: 'Mot de passe',
                     icon: Icons.lock_outline,
                     obscureText: true,
-                    validator:
-                        (v) =>
-                            v == null || v.length < 6
-                                ? '6 caractères minimum'
-                                : null,
+                    validator: (v) => v == null || v.length < 6
+                        ? '6 caractères minimum'
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   if (widget.fromAdmin)
@@ -290,18 +287,17 @@ class _RegisterViewState extends State<RegisterView> {
           horizontal: 12,
         ),
       ),
-      items:
-          items
-              .map(
-                (item) => DropdownMenuItem(
-                  value: item,
-                  child: Text(item[0].toUpperCase() + item.substring(1)),
-                ),
-              )
-              .toList(),
+      items: items
+          .map(
+            (item) => DropdownMenuItem(
+              value: item,
+              child: Text(item[0].toUpperCase() + item.substring(1)),
+            ),
+          )
+          .toList(),
       onChanged: onChanged,
-      validator:
-          (value) => value == null ? 'Veuillez sélectionner une option' : null,
+      validator: (value) =>
+          value == null ? 'Veuillez sélectionner une option' : null,
     );
   }
 }
