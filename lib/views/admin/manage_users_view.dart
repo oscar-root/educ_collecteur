@@ -42,28 +42,27 @@ class _ManageUsersViewState extends State<ManageUsersView> {
 
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: Text('$actionText cet utilisateur ?'),
-            content: Text(
-              "Le compte de ${user.fullName} sera ${block ? 'restreint' : 'réactivé'}.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Annuler"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(
-                  actionText,
-                  style: TextStyle(
-                    color: block ? Colors.orange.shade700 : Colors.green,
-                  ),
-                ),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: Text('$actionText cet utilisateur ?'),
+        content: Text(
+          "Le compte de ${user.fullName} sera ${block ? 'restreint' : 'réactivé'}.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Annuler"),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              actionText,
+              style: TextStyle(
+                color: block ? Colors.orange.shade700 : Colors.green,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -77,26 +76,25 @@ class _ManageUsersViewState extends State<ManageUsersView> {
   Future<void> _archiveUser(UserModel user) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Archiver cet utilisateur ?'),
-            content: Text(
-              "Le compte de ${user.fullName} sera désactivé et déplacé vers les archives.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Annuler"),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  "Archiver",
-                  style: TextStyle(color: Color.fromARGB(255, 244, 79, 76)),
-                ),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text('Archiver cet utilisateur ?'),
+        content: Text(
+          "Le compte de ${user.fullName} sera désactivé et déplacé vers les archives.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Annuler"),
           ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Archiver",
+              style: TextStyle(color: Color.fromARGB(255, 244, 79, 76)),
+            ),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -110,30 +108,29 @@ class _ManageUsersViewState extends State<ManageUsersView> {
   Future<void> _deleteUser(UserModel user) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text(
-              '⚠️ Suppression Définitive ⚠️',
-              style: TextStyle(color: Colors.red),
-            ),
-            content: Text(
-              "Vous êtes sur le point de supprimer définitivement le profil de ${user.fullName}. Cette action est IRREVERSIBLE.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text("Annuler"),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  "Oui, Supprimer",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
+      builder: (_) => AlertDialog(
+        title: const Text(
+          '⚠️ Suppression Définitive ⚠️',
+          style: TextStyle(color: Colors.red),
+        ),
+        content: Text(
+          "Vous êtes sur le point de supprimer définitivement le profil de ${user.fullName}. Cette action est IRREVERSIBLE.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Annuler"),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Oui, Supprimer",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
     );
 
     if (confirm == true) {
@@ -143,59 +140,57 @@ class _ManageUsersViewState extends State<ManageUsersView> {
 
   /// Affiche une boîte de dialogue avec les informations complètes de l'utilisateur.
   void _showUserDetailsDialog(UserModel user) {
-    final creationDate =
-        user.createdAt != null
-            ? DateFormat(
-              'dd/MM/yyyy à HH:mm',
-              'fr_FR',
-            ).format(user.createdAt!.toDate())
-            : 'Date inconnue';
+    final creationDate = user.createdAt != null
+        ? DateFormat(
+            'dd/MM/yyyy à HH:mm',
+            'fr_FR',
+          ).format(user.createdAt!.toDate())
+        : 'Date inconnue';
 
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Row(
-              children: [
-                Icon(
-                  _getRoleAppearance(user.role).icon,
-                  color: _getRoleAppearance(user.role).color,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    user.fullName,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ),
-              ],
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              _getRoleAppearance(user.role).icon,
+              color: _getRoleAppearance(user.role).color,
             ),
-            content: SingleChildScrollView(
-              child: ListBody(
-                children: <Widget>[
-                  _buildDetailRow('UID:', user.uid),
-                  _buildDetailRow('Email:', user.email),
-                  _buildDetailRow('Téléphone:', user.phone),
-                  _buildDetailRow('Rôle:', user.role.toUpperCase()),
-                  _buildDetailRow('Établissement:', user.schoolName),
-                  _buildDetailRow('Code École:', user.codeEcole),
-                  _buildDetailRow('Niveau École:', user.niveauEcole),
-                  _buildDetailRow('Genre:', user.gender),
-                  _buildDetailRow(
-                    'Statut:',
-                    user.isBlocked ? 'Bloqué' : 'Actif',
-                  ),
-                  _buildDetailRow('Créé le:', creationDate),
-                ],
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                user.fullName,
+                style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Fermer'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              // _buildDetailRow('UID:', user.uid),
+              _buildDetailRow('Email:', user.email),
+              _buildDetailRow('Téléphone:', user.phone),
+              _buildDetailRow('Rôle:', user.role.toUpperCase()),
+              _buildDetailRow('Établissement:', user.schoolName),
+              _buildDetailRow('Code École:', user.codeEcole),
+              _buildDetailRow('Niveau École:', user.niveauEcole),
+              _buildDetailRow('Genre:', user.gender),
+              _buildDetailRow(
+                'Statut:',
+                user.isBlocked ? 'Bloqué' : 'Actif',
               ),
+              _buildDetailRow('Créé le:', creationDate),
             ],
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -250,36 +245,37 @@ class _ManageUsersViewState extends State<ManageUsersView> {
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _getUserStream(),
               builder: (context, snapshot) {
-                if (snapshot.hasError)
+                if (snapshot.hasError) {
                   return const Center(child: Text("Erreur de chargement."));
-                if (snapshot.connectionState == ConnectionState.waiting)
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
                     child: Text("Aucun utilisateur actif trouvé."),
                   );
+                }
 
-                final filteredUsers =
-                    snapshot.data!.docs
-                        .map((doc) => UserModel.fromMap(doc.data()))
-                        .where((user) {
-                          final searchLower =
-                              _searchController.text.toLowerCase();
-                          if (searchLower.isEmpty) return true;
-                          return user.fullName.toLowerCase().contains(
-                                searchLower,
-                              ) ||
-                              user.email.toLowerCase().contains(searchLower) ||
-                              user.role.toLowerCase().contains(searchLower);
-                        })
-                        .toList();
+                final filteredUsers = snapshot.data!.docs
+                    .map((doc) => UserModel.fromMap(doc.data()))
+                    .where((user) {
+                  final searchLower = _searchController.text.toLowerCase();
+                  if (searchLower.isEmpty) return true;
+                  return user.fullName.toLowerCase().contains(
+                            searchLower,
+                          ) ||
+                      user.email.toLowerCase().contains(searchLower) ||
+                      user.role.toLowerCase().contains(searchLower);
+                }).toList();
 
-                if (filteredUsers.isEmpty)
+                if (filteredUsers.isEmpty) {
                   return const Center(
                     child: Text(
                       "Aucun utilisateur ne correspond à votre recherche.",
                     ),
                   );
+                }
 
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 80),
@@ -291,10 +287,9 @@ class _ManageUsersViewState extends State<ManageUsersView> {
 
                     return Card(
                       elevation: 2,
-                      color:
-                          isBlocked
-                              ? Colors.grey.shade300.withOpacity(0.5)
-                              : null,
+                      color: isBlocked
+                          ? Colors.grey.shade300.withOpacity(0.5)
+                          : null,
                       margin: const EdgeInsets.symmetric(
                         vertical: 6,
                         horizontal: 8,
@@ -321,10 +316,9 @@ class _ManageUsersViewState extends State<ManageUsersView> {
                           "${user.role.toUpperCase()} - ${user.schoolName}\n${user.email}",
                         ),
                         isThreeLine: true,
-                        onTap:
-                            () => _showUserDetailsDialog(
-                              user,
-                            ), // Action "Détails" sur le clic principal
+                        onTap: () => _showUserDetailsDialog(
+                          user,
+                        ), // Action "Détails" sur le clic principal
                         trailing: PopupMenuButton<String>(
                           onSelected: (value) {
                             if (value == 'edit') {
@@ -343,63 +337,62 @@ class _ManageUsersViewState extends State<ManageUsersView> {
                               _deleteUser(user);
                             }
                           },
-                          itemBuilder:
-                              (context) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit_outlined, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('Modifier'),
-                                    ],
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Modifier'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            PopupMenuItem(
+                              value: 'toggle_block',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isBlocked
+                                        ? Icons.lock_open_outlined
+                                        : Icons.block,
+                                    size: 20,
                                   ),
-                                ),
-                                const PopupMenuDivider(),
-                                PopupMenuItem(
-                                  value: 'toggle_block',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isBlocked
-                                            ? Icons.lock_open_outlined
-                                            : Icons.block,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(isBlocked ? 'Débloquer' : 'Bloquer'),
-                                    ],
+                                  SizedBox(width: 8),
+                                  Text(isBlocked ? 'Débloquer' : 'Bloquer'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'archive',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.archive_outlined, size: 20),
+                                  SizedBox(width: 8),
+                                  Text('Archiver'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuDivider(),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete_forever_outlined,
+                                    color: Colors.red,
+                                    size: 20,
                                   ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'archive',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.archive_outlined, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('Archiver'),
-                                    ],
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Supprimer',
+                                    style: TextStyle(color: Colors.red),
                                   ),
-                                ),
-                                const PopupMenuDivider(),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete_forever_outlined,
-                                        color: Colors.red,
-                                        size: 20,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Supprimer',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -413,13 +406,12 @@ class _ManageUsersViewState extends State<ManageUsersView> {
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.person_add_alt_1_outlined),
         label: const Text("Ajouter Utilisateur"),
-        onPressed:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const RegisterView(fromAdmin: true),
-              ),
-            ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RegisterView(fromAdmin: true),
+          ),
+        ),
       ),
     );
   }
@@ -435,16 +427,15 @@ class _ManageUsersViewState extends State<ManageUsersView> {
           hintText: 'Nom, email ou rôle...',
           prefixIcon: const Icon(Icons.search),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          suffixIcon:
-              _searchController.text.isNotEmpty
-                  ? IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  )
-                  : null,
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {});
+                  },
+                )
+              : null,
         ),
         onChanged: (value) => setState(() {}),
       ),

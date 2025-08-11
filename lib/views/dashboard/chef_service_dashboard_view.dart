@@ -22,22 +22,141 @@ class ChefServiceDashboardView extends StatefulWidget {
 }
 
 class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
-  // Contrôleurs
-  final AuthController _authController = AuthController();
+  // --- NOUVELLE LOGIQUE DE NAVIGATION PAR ONGLETS ---
+  int _selectedIndex = 0;
+
+  // Liste des vues (ou "pages") à afficher dans le corps du Scaffold
+  final List<Widget> _pages = [
+    const _FormsManagementPage(), // La page de gestion des formulaires est maintenant le premier onglet
+    const StatisticsPage(),
+    const SavedReportsPage(),
+    const ReportGenerationPage(),
+  ];
+
+  // Titres correspondants pour la barre d'applications
+  final List<String> _pageTitles = [
+    'Gestion des Formulaires',
+    'Statistiques',
+    'Rapports Enregistrés',
+    'Génération de Rapports'
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title:
+            Text(_pageTitles[_selectedIndex]), // Le titre change dynamiquement
+      ),
+      drawer: _buildDrawer(),
+      // Le corps du Scaffold est maintenant un IndexedStack.
+      // Il affiche seulement l'onglet actif tout en gardant les autres en mémoire pour une navigation rapide.
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
+      ),
+      // --- NOUVELLE BARRE DE NAVIGATION STANDARD ET ÉQUILIBRÉE ---
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed, // Empêche les icônes de bouger
+        selectedItemColor: Theme.of(context).primaryColor,
+        unselectedItemColor: Colors.grey.shade600,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.folder_copy_outlined),
+            label: 'Gérer',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart_outlined),
+            label: 'Statistiques',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history_edu_outlined),
+            label: 'Rapports',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.picture_as_pdf_outlined),
+            label: 'Générer',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Le widget pour le menu latéral reste inchangé.
+  Drawer _buildDrawer() {
+    final authController = AuthController();
+    return Drawer(
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              UserAccountsDrawerHeader(
+                accountName: const Text("Chef de Service"),
+                accountEmail: Text(
+                    authController.auth.currentUser?.email ?? "Non connecté"),
+                currentAccountPicture: const CircleAvatar(
+                    child: Icon(Icons.supervisor_account, size: 40)),
+                decoration:
+                    BoxDecoration(color: Theme.of(context).primaryColor),
+              ),
+              ExpansionTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: const Text("Paramètres"),
+                children: [
+                  SwitchListTile(
+                    title: const Text("Mode Sombre"),
+                    secondary: Icon(themeProvider.isDarkMode
+                        ? Icons.dark_mode
+                        : Icons.light_mode),
+                    value: themeProvider.isDarkMode,
+                    onChanged: (value) => themeProvider.toggleTheme(value),
+                  ),
+                ],
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text('Déconnexion',
+                    style: TextStyle(color: Colors.red)),
+                onTap: () async {
+                  await authController.signOut();
+                  if (mounted)
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/login', (route) => false);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+// --- NOUVEAU WIDGET : GESTION DES FORMULAIRES ---
+// L'ancienne logique du body est encapsulée dans son propre widget pour un code plus propre.
+
+class _FormsManagementPage extends StatefulWidget {
+  const _FormsManagementPage();
+
+  @override
+  State<_FormsManagementPage> createState() => __FormsManagementPageState();
+}
+
+class __FormsManagementPageState extends State<_FormsManagementPage> {
   final ST2Controller _st2Controller = ST2Controller();
   final TextEditingController _searchController = TextEditingController();
 
-  // Variables pour les filtres
   String? _selectedNiveau,
       _selectedProvinceEdu,
       _selectedSousDivision,
       _selectedRegimeGestion,
       _selectedPeriode;
-
-  // Stream pour écouter les données ST2 en temps réel
   late Stream<List<ST2Model>> _st2Stream;
 
-  // Listes pour les menus déroulants des filtres
   final List<String> _niveaux = ['Maternel', 'Primaire', 'Secondaire'];
   final List<String> _provincesEdu = ['HAUT-LOMAMI 1'];
   final List<String> _sousDivisions = [
@@ -69,6 +188,12 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
     super.initState();
     _st2Stream = _fetchAndFilterForms();
     _searchController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Stream<List<ST2Model>> _fetchAndFilterForms() {
@@ -129,106 +254,11 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Dashboard Chef de Service")),
-      drawer: _buildDrawer(),
-      body: Column(
-        children: [
-          _buildFilterControls(),
-          Expanded(child: _buildFormsList()),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {}, // L'action principale est de voir les formulaires
-        tooltip: 'Gérer les ST2',
-        child: const Icon(Icons.folder_copy_outlined),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      // --- BARRE DE NAVIGATION MISE À JOUR ---
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8.0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(
-                icon: Icons.bar_chart_outlined,
-                label: 'Statistiques',
-                page: const StatisticsPage()),
-            _buildNavItem(
-                icon: Icons.history_edu_outlined,
-                label: 'Rapports',
-                page: const SavedReportsPage()),
-            const SizedBox(width: 48), // Espace pour le FAB
-            _buildNavItem(
-                icon: Icons.picture_as_pdf_outlined,
-                label: 'Générer',
-                page: const ReportGenerationPage()),
-            // L'icône des paramètres a été retirée.
-            // On ajoute un SizedBox pour équilibrer l'espace.
-            const SizedBox(width: 48),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(
-      {required IconData icon, required String label, Widget? page}) {
-    return IconButton(
-      icon: Icon(icon, color: Colors.grey.shade700),
-      onPressed: () =>
-          Navigator.push(context, MaterialPageRoute(builder: (_) => page!)),
-      tooltip: label,
-    );
-  }
-
-  Drawer _buildDrawer() {
-    return Drawer(
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) {
-          return ListView(
-            padding: EdgeInsets.zero,
-            children: [
-              UserAccountsDrawerHeader(
-                accountName: const Text("Chef de Service"),
-                accountEmail: Text(
-                    _authController.auth.currentUser?.email ?? "Non connecté"),
-                currentAccountPicture: const CircleAvatar(
-                    child: Icon(Icons.supervisor_account, size: 40)),
-                decoration:
-                    BoxDecoration(color: Theme.of(context).primaryColor),
-              ),
-              ExpansionTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text("Paramètres"),
-                children: [
-                  SwitchListTile(
-                    title: const Text("Mode Sombre"),
-                    secondary: Icon(themeProvider.isDarkMode
-                        ? Icons.dark_mode
-                        : Icons.light_mode),
-                    value: themeProvider.isDarkMode,
-                    onChanged: (value) => themeProvider.toggleTheme(value),
-                  ),
-                ],
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
-                title: const Text('Déconnexion',
-                    style: TextStyle(color: Colors.red)),
-                onTap: () async {
-                  await _authController.signOut();
-                  if (mounted)
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/login', (route) => false);
-                },
-              ),
-            ],
-          );
-        },
-      ),
+    return Column(
+      children: [
+        _buildFilterControls(),
+        Expanded(child: _buildFormsList()),
+      ],
     );
   }
 
@@ -250,6 +280,10 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
           return form.schoolName.toLowerCase().contains(searchQuery) ||
               form.chefEtablissementName.toLowerCase().contains(searchQuery);
         }).toList();
+
+        if (forms.isEmpty)
+          return const Center(
+              child: Text("Aucun formulaire trouvé pour cette recherche."));
 
         return ListView.builder(
           padding: const EdgeInsets.all(8),
