@@ -1,14 +1,15 @@
 // lib/st2/pages/st2_list_view.dart
 
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // --- IMPORTS DE VOTRE PROJET ---
+import 'package:educ_collecteur/controllers/st2_controller.dart';
 import 'package:educ_collecteur/models/st2_model.dart';
-// La ligne suivante est maintenant active pour la navigation
 import 'package:educ_collecteur/views/st2/st2_detail_view.dart';
+import 'package:educ_collecteur/views/st2/pages/st2_form_page.dart'; // AJOUTÉ: Pour la navigation
 
 class ST2ListView extends StatefulWidget {
   const ST2ListView({super.key});
@@ -19,116 +20,55 @@ class ST2ListView extends StatefulWidget {
 
 class _ST2ListViewState extends State<ST2ListView> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final ST2Controller _st2Controller =
+      ST2Controller(); // AMÉLIORÉ: Utilisation du contrôleur
   User? _currentUser;
   late Future<List<ST2Model>> _formsFuture;
 
   @override
   void initState() {
     super.initState();
+    initializeDateFormatting(
+      'fr_FR',
+      null,
+    ); // AJOUTÉ: Pour le format de date local
     _currentUser = _auth.currentUser;
+    _loadForms();
+  }
+
+  // AMÉLIORÉ: La logique de récupération est maintenant dans une méthode claire
+  void _loadForms() {
     if (_currentUser != null) {
-      _formsFuture = _fetchUserForms();
+      // La vue demande simplement les formulaires au contrôleur, sans savoir comment il les obtient.
+      _formsFuture = _st2Controller.getForms(
+        context: context,
+        userId: _currentUser!.uid,
+      );
     } else {
-      _formsFuture = Future.value([]);
+      _formsFuture = Future.value([]); // Pas d'utilisateur, pas de formulaires.
     }
   }
 
-  // Dans lib/st2/pages/st2_list_view.dart
-
-  // Dans lib/st2/pages/st2_list_view.dart
-
-  Future<List<ST2Model>> _fetchUserForms() async {
-    if (_currentUser == null) {
-      print(
-        "DEBUG: _fetchUserForms a été appelé mais _currentUser est null. Annulation.",
-      );
-      return [];
-    }
-
-    // Affiche l'UID de l'utilisateur pour lequel on recherche des formulaires.
-    print("DEBUG: Recherche des formulaires pour l'UID : ${_currentUser!.uid}");
-
-    try {
-      // Affiche le nom de la collection et le filtre utilisé.
-      print(
-        "DEBUG: Requête sur la collection 'st2_forms' avec le filtre 'submittedBy'.",
-      );
-
-      final querySnapshot =
-          await FirebaseFirestore.instance
-              .collection('st2_forms')
-              .where('submittedBy', isEqualTo: _currentUser!.uid)
-              .orderBy('submittedAt', descending: true)
-              .get();
-
-      // AFFICHE LE NOMBRE DE DOCUMENTS TROUVÉS. C'EST LA LIGNE LA PLUS IMPORTANTE !
-      print(
-        "DEBUG: La requête Firestore a retourné ${querySnapshot.docs.length} document(s).",
-      );
-
-      if (querySnapshot.docs.isEmpty) {
-        return [];
-      }
-
-      // Tente de convertir chaque document et attrape les erreurs de conversion.
-      return querySnapshot.docs
-          .map((doc) {
-            try {
-              print("DEBUG: Conversion du document ID: ${doc.id}");
-              return ST2Model.fromFirestore(doc);
-            } catch (e) {
-              print(
-                "ERREUR FATALE: Impossible de convertir le document ${doc.id}. Erreur: $e",
-              );
-              // Retourner null ou gérer l'erreur comme vous le souhaitez
-              return null;
-            }
-          })
-          .where((form) => form != null)
-          .cast<ST2Model>()
-          .toList(); // Filtre les documents qui n'ont pas pu être convertis
-    } on FirebaseException catch (e) {
-      print(
-        "ERREUR FIREBASE: Une exception Firebase a eu lieu: ${e.message} (Code: ${e.code})",
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erreur de chargement : ${e.message}"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return [];
-    } catch (e) {
-      print(
-        "ERREUR INATTENDUE: Une erreur générale a eu lieu dans _fetchUserForms: $e",
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Une erreur inattendue est survenue : $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return [];
-    }
-  }
-
+  // AMÉLIORÉ: Le rafraîchissement met à jour l'état avec la nouvelle future
   Future<void> _refreshForms() async {
-    if (_currentUser != null) {
-      setState(() {
-        _formsFuture = _fetchUserForms();
-      });
-    }
+    setState(() {
+      _loadForms();
+    });
+  }
+
+  // AJOUTÉ: Méthode pour naviguer vers la page de création
+  void _navigateToCreateForm() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ST2FormPage()),
+    ).then((_) => _refreshForms()); // Rafraîchit la liste au retour
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Mes Formulaires ST2"),
+        title: const Text("Mes Formulaires Soumis"),
         backgroundColor: Colors.indigo,
         actions: [
           IconButton(
@@ -140,16 +80,18 @@ class _ST2ListViewState extends State<ST2ListView> {
       ),
       body:
           _currentUser == null
-              ? const Center(child: Text("Veuillez vous connecter."))
+              ? const Center(
+                child: Text(
+                  "Veuillez vous connecter pour voir vos formulaires.",
+                ),
+              )
               : FutureBuilder<List<ST2Model>>(
                 future: _formsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (snapshot.hasError ||
-                      !snapshot.hasData ||
-                      snapshot.data!.isEmpty) {
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
                     return RefreshIndicator(
                       onRefresh: _refreshForms,
                       child: ListView(
@@ -158,7 +100,7 @@ class _ST2ListViewState extends State<ST2ListView> {
                             padding: EdgeInsets.only(top: 150.0),
                             child: Center(
                               child: Text(
-                                "Aucun formulaire soumis pour le moment.",
+                                "Aucun formulaire soumis pour le moment.\nAppuyez sur '+' pour en créer un.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 17,
@@ -176,7 +118,12 @@ class _ST2ListViewState extends State<ST2ListView> {
                   return RefreshIndicator(
                     onRefresh: _refreshForms,
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(8.0),
+                      padding: const EdgeInsets.fromLTRB(
+                        8,
+                        8,
+                        8,
+                        80,
+                      ), // Espace pour le FAB
                       itemCount: forms.length,
                       itemBuilder: (context, index) {
                         final form = forms[index];
@@ -187,6 +134,9 @@ class _ST2ListViewState extends State<ST2ListView> {
                                   'fr_FR',
                                 ).format(form.submittedAt!)
                                 : 'Date inconnue';
+
+                        // AMÉLIORÉ: Widget de statut pour une meilleure visualisation
+                        final statusWidget = _buildStatusChip(form.status);
 
                         return Card(
                           elevation: 3,
@@ -224,12 +174,19 @@ class _ST2ListViewState extends State<ST2ListView> {
                             ),
                             subtitle: Padding(
                               padding: const EdgeInsets.only(top: 5.0),
-                              child: Text(
-                                'Période: ${form.periode ?? 'N/A'}\nSoumis le: $submissionDate',
-                                style: TextStyle(
-                                  color: Colors.grey.shade700,
-                                  height: 1.5,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Période: ${form.periode ?? 'N/A'}\nSoumis le: $submissionDate',
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  statusWidget,
+                                ],
                               ),
                             ),
                             trailing: const Icon(
@@ -238,14 +195,15 @@ class _ST2ListViewState extends State<ST2ListView> {
                               color: Colors.grey,
                             ),
                             onTap: () {
-                              // --- NAVIGATION VERS LA PAGE DE DÉTAILS ---
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder:
                                       (context) => ST2DetailView(form: form),
                                 ),
-                              );
+                              ).then(
+                                (_) => _refreshForms(),
+                              ); // AMÉLIORÉ: Rafraîchit au retour
                             },
                           ),
                         );
@@ -254,6 +212,42 @@ class _ST2ListViewState extends State<ST2ListView> {
                   );
                 },
               ),
+      // AJOUTÉ: Bouton pour créer un nouveau formulaire
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _navigateToCreateForm,
+        label: const Text('Nouveau Formulaire'),
+        icon: const Icon(Icons.add),
+        backgroundColor: Colors.indigo,
+      ),
+    );
+  }
+
+  // AJOUTÉ: Widget helper pour la puce de statut
+  Widget _buildStatusChip(String status) {
+    Color backgroundColor;
+    String label;
+
+    switch (status) {
+      case 'Validé':
+        backgroundColor = Colors.green.shade100;
+        label = 'Validé';
+        break;
+      case 'Rejeté':
+        backgroundColor = Colors.red.shade100;
+        label = 'Rejeté';
+        break;
+      case 'Soumis':
+      default:
+        backgroundColor = Colors.blue.shade100;
+        label = 'Soumis';
+        break;
+    }
+
+    return Chip(
+      label: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+      backgroundColor: backgroundColor,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      side: BorderSide.none,
     );
   }
 }

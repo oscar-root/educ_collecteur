@@ -3,10 +3,9 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // --- THÈME CLAIR (Votre version, légèrement améliorée pour Material 3) ---
+  // --- THÈME CLAIR ---
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
-    // La méthode 'fromSeed' génère une palette de couleurs complète et harmonieuse.
     colorScheme: ColorScheme.fromSeed(
       seedColor: Colors.indigo,
       brightness: Brightness.light,
@@ -32,21 +31,22 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
-    cardTheme: CardTheme(
+    // --- LA CORRECTION EST ICI ---
+    // Le nom correct de la classe est CardThemeData, pas CardTheme.
+    cardTheme: CardThemeData(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
   );
 
-  // --- THÈME SOMBRE (AJOUTÉ POUR CORRIGER L'ERREUR) ---
-  // Cette définition est ce qui manquait et causait l'erreur dans main.dart
+  // --- THÈME SOMBRE ---
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.indigo, // On garde la même couleur de base
-      brightness: Brightness.dark, // On spécifie que c'est un thème sombre
+      seedColor: Colors.indigo,
+      brightness: Brightness.dark,
     ),
-    scaffoldBackgroundColor: const Color(0xFF121212), // Fond sombre standard
+    scaffoldBackgroundColor: const Color(0xFF121212),
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.grey[900],
       foregroundColor: Colors.white,
@@ -62,15 +62,15 @@ class AppTheme {
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        // On utilise la couleur secondaire générée par le ColorScheme pour le bouton en mode sombre
         backgroundColor: Colors.indigo.shade200,
         foregroundColor: Colors.black87,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
-    cardTheme: CardTheme(
+    // --- ET LA CORRECTION EST AUSSI ICI ---
+    cardTheme: CardThemeData(
       elevation: 2,
-      color: Colors.grey[850], // Cartes légèrement plus claires que le fond
+      color: Colors.grey[850],
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
   );

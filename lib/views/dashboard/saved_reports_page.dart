@@ -3,50 +3,64 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 import 'package:educ_collecteur/models/report_model.dart';
-import 'report_detail_page.dart'; // <-- Importez la nouvelle page de détails
+import 'report_viewer_page.dart'; // NOUVEAU: Import de la page de visualisation
 
-class SavedReportsPage extends StatelessWidget {
+class SavedReportsPage extends StatefulWidget {
   const SavedReportsPage({super.key});
+  @override
+  State<SavedReportsPage> createState() => _SavedReportsPageState();
+}
 
-  /// Logique pour supprimer un rapport avec confirmation
-  Future<void> _deleteReport(BuildContext context, ReportModel report) async {
-    final bool? confirm = await showDialog(
+class _SavedReportsPageState extends State<SavedReportsPage> {
+  /// Navigue vers la page de visualisation pour le rapport sélectionné.
+  void _viewReport(ReportModel report) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ReportViewerPage(report: report)),
+    );
+  }
+
+  /// Affiche une boîte de dialogue de confirmation avant de supprimer le rapport de Firestore.
+  Future<void> _deleteReport(ReportModel report) async {
+    if (report.id == null) return;
+
+    final bool? confirm = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: Text(
-              "Voulez-vous vraiment supprimer le rapport '${report.title}' ? Cette action est irréversible.",
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Annuler'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text(
-                  'Supprimer',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text(
+            'Voulez-vous vraiment supprimer le rapport "${report.title}" ? Cette action est irréversible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annuler')),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
           ),
+        ],
+      ),
     );
 
-    if (confirm == true && report.id != null) {
-      await FirebaseFirestore.instance
-          .collection('generated_reports')
-          .doc(report.id)
-          .delete();
-      if (context.mounted) {
+    if (confirm == true && mounted) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('generated_reports')
+            .doc(report.id)
+            .delete();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rapport supprimé.'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(
+              content: Text("${report.title} supprimé."),
+              backgroundColor: Colors.orange),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("Erreur lors de la suppression: $e"),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -54,98 +68,81 @@ class SavedReportsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Rapports Enregistrés"),
-        automaticallyImplyLeading:
-            false, // On retire la flèche de retour si c'est un onglet
-      ),
-      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('generated_reports')
-                .orderBy('generatedAt', descending: true)
-                .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting)
-            return const Center(child: CircularProgressIndicator());
-          if (snapshot.hasError)
-            return Center(child: Text("Erreur : ${snapshot.error}"));
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  "Aucun rapport n'a été enregistré.",
-                  textAlign: TextAlign.center,
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      // Le Stream écoute maintenant la collection `generated_reports`
+      stream: FirebaseFirestore.instance
+          .collection('generated_reports')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+              child:
+                  Text("Erreur de chargement des rapports: ${snapshot.error}"));
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Text(
+                "Aucun rapport n'a été généré et sauvegardé pour le moment.",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                    fontSize: 16, color: Colors.grey.shade600),
+              ),
+            ),
+          );
+        }
+
+        // Conversion des documents Firestore en objets ReportModel
+        final reports = snapshot.data!.docs
+            .map((doc) => ReportModel.fromFirestore(doc))
+            .toList();
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(8.0),
+          itemCount: reports.length,
+          itemBuilder: (context, index) {
+            final report = reports[index];
+            return Card(
+              elevation: 2,
+              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                leading: const Icon(Icons.article_outlined,
+                    color: Colors.indigo, size: 36),
+                title: Text(report.title,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
+                subtitle: Text(
+                  "Créé le: ${DateFormat('dd/MM/yyyy à HH:mm', 'fr_FR').format(report.createdAt)}\nCritères: ${report.criteria}",
+                  style: GoogleFonts.poppins(),
+                ),
+                onTap: () => _viewReport(report),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'view') _viewReport(report);
+                    if (value == 'delete') _deleteReport(report);
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                        value: 'view', child: Text('Consulter')),
+                    const PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Supprimer',
+                            style: TextStyle(color: Colors.red))),
+                  ],
                 ),
               ),
             );
-          }
-
-          final reports =
-              snapshot.data!.docs
-                  .map((doc) => ReportModel.fromFirestore(doc))
-                  .toList();
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(8),
-            itemCount: reports.length,
-            itemBuilder: (context, index) {
-              final report = reports[index];
-              final date =
-                  report.generatedAt != null
-                      ? DateFormat(
-                        'dd/MM/yyyy à HH:mm',
-                        'fr_FR',
-                      ).format(report.generatedAt!)
-                      : 'Date inconnue';
-
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: Icon(
-                    Icons.assessment,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  title: Text(
-                    report.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    "Critère: ${report.filterValue}\n${report.summary['totalEtablissements'] ?? 0} établissements - Généré le: $date",
-                  ),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'delete') _deleteReport(context, report);
-                    },
-                    itemBuilder:
-                        (context) => [
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Text(
-                              'Supprimer',
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ],
-                  ),
-                  onTap: () {
-                    // --- NAVIGATION VERS LA PAGE DE DÉTAILS ---
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ReportDetailPage(report: report),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
+          },
+        );
+      },
     );
   }
 }

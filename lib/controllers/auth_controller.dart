@@ -87,17 +87,22 @@ class AuthController {
     return user;
   }
 
+  // =========================================================================
+  // MÉTHODE MISE À JOUR
+  // =========================================================================
   /// Crée un nouvel utilisateur (par un admin) sans déconnecter l'admin.
+  /// Les champs liés à l'école sont maintenant optionnels.
   Future<void> createUserByAdmin({
     required String email,
     required String password,
     required String fullName,
     required String phone,
-    required String schoolName,
-    required String codeEcole,
-    required String niveauEcole,
     required String gender,
     required String role,
+    // CORRIGÉ: Les paramètres suivants sont maintenant optionnels (String?)
+    String? schoolName,
+    String? codeEcole,
+    String? niveauEcole,
   }) async {
     final tempAppName =
         'temp_registration_${DateTime.now().millisecondsSinceEpoch}';
@@ -114,43 +119,39 @@ class AuthController {
       if (newUser == null)
         throw Exception("La création de l'utilisateur (Auth) a échoué.");
 
+      // Le modèle UserModel est rempli avec les données fournies.
+      // On utilise l'opérateur `?? ''` pour fournir une chaîne vide par défaut si les
+      // valeurs sont nulles, afin de ne pas stocker de `null` dans Firestore.
       final newUserModel = UserModel(
         uid: newUser.uid,
         email: email,
         fullName: fullName,
         phone: phone,
-        schoolName: schoolName,
-        codeEcole: codeEcole,
-        niveauEcole: niveauEcole.toLowerCase(),
+        // CORRIGÉ: Utilisation de `?? ''` pour gérer les valeurs optionnelles.
+        schoolName: schoolName ?? '',
+        codeEcole: codeEcole ?? '',
+        niveauEcole: (niveauEcole ?? '').toLowerCase(),
         gender: gender,
         role: role.toLowerCase(),
       );
 
+      // On écrit le document de l'utilisateur dans Firestore.
       await _db.collection('users').doc(newUser.uid).set(newUserModel.toMap());
     } catch (e) {
+      // Propage l'erreur pour qu'elle soit affichée dans la SnackBar de la vue.
       rethrow;
     } finally {
+      // Assure que l'application temporaire est toujours supprimée, même en cas d'erreur.
       await tempApp.delete();
     }
   }
 
   /// --- NOUVELLE MÉTHODE POUR LA SUPPRESSION DÉFINITIVE ---
-  /// Supprime le document d'un utilisateur dans Firestore.
-  /// NOTE : Cette méthode ne supprime PAS l'utilisateur de Firebase Authentication.
-  /// La suppression complète d'un autre utilisateur nécessite des privilèges d'administrateur
-  /// via l'Admin SDK (côté serveur, ex: Cloud Functions) pour des raisons de sécurité.
-  /// La suppression du document Firestore est l'action la plus importante côté client.
   Future<void> deleteUserAccount(UserModel userToDelete) async {
     try {
-      // Étape 1 : Supprimer le document de l'utilisateur dans Firestore
       await _db.collection('users').doc(userToDelete.uid).delete();
-
-      // Étape 2 (Optionnelle, via Cloud Function) :
-      // Ici, on appellerait une fonction Cloud qui, elle, supprimerait l'utilisateur
-      // de Firebase Authentication en utilisant l'Admin SDK.
-      // ex: https.onCall((data, context) => { admin.auth().deleteUser(data.uid) });
+      // NOTE: La suppression de Firebase Auth nécessite une Cloud Function.
     } catch (e) {
-      // Propage l'erreur pour l'afficher dans la vue.
       rethrow;
     }
   }

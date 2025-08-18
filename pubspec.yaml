@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.7.2
+  sdk: '>=3.2.0 <4.0.0' # Mise à jour vers une contrainte plus standard et moderne
 
 dependencies:
   flutter:
@@ -15,21 +15,46 @@ dependencies:
   intl: ^0.18.1
   image_picker: ^1.1.2
   firebase_storage: ^11.7.7
-  carousel_slider: ^5.1.1
+  carousel_slider: ^4.2.1 # Version mise à jour pour compatibilité
   animate_do: ^3.3.4
   fl_chart: ^0.68.0
   provider: ^6.1.2 
-  pdf: ^3.11.3
-  printing: ^5.13.1
+  pdf: ^3.10.8 # Version mise à jour pour compatibilité
+  printing: ^5.11.1 # Version mise à jour pour compatibilité
+  google_fonts: ^6.2.1 # Version mise à jour pour compatibilité
+  google_nav_bar: ^5.0.6 # Version mise à jour pour compatibilité
+  path_provider: ^2.1.3
+  open_file_plus: ^3.4.1
+  url_launcher: ^6.2.6
+  universal_html: ^2.2.4
  
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0 # Version mise à jour pour compatibilité
+  flutter_launcher_icons: ^0.13.1 # Ajouté pour personnaliser l’icône
 
+# Configuration de flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logoeduc.png" # mets ton image ici
+  min_sdk_android: 21 # requis pour Android
+
+# La section suivante est spécifique à Flutter.
 flutter:
+
+  # La ligne suivante garantit que les icônes Material Design sont disponibles.
   uses-material-design: true
+
   assets:
-    - lib/assets/images/default_avatar.png
-    - lib/assets/images/logo.png
+    - assets/images/ # CORRIGÉ : Déclare le dossier entier, ce qui est plus propre
+    - assets/fonts/   # CORRIGÉ : Déclare le dossier entier et est correctement aligné
+
+  fonts:
+    - family: Poppins
+      fonts:
+        - asset: assets/fonts/Poppins-Regular.ttf
+        - asset: assets/fonts/Poppins-Bold.ttf
+          weight: 700
