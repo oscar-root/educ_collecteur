@@ -100,8 +100,8 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     "Mot de passe oublié ?",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                          fontWeight: FontWeight.bold,
+                        ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -114,7 +114,6 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                   ),
                 ),
                 const SizedBox(height: 32),
-
                 FadeInUp(
                   delay: const Duration(milliseconds: 300),
                   child: CustomTextField(
@@ -130,9 +129,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     },
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 FadeInUp(
                   delay: const Duration(milliseconds: 400),
                   child: CustomButton(
@@ -141,7 +138,6 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     onPressed: _isLoading ? null : _handleReset,
                   ),
                 ),
-
                 const SizedBox(height: 8),
                 FadeInUp(
                   delay: const Duration(milliseconds: 500),

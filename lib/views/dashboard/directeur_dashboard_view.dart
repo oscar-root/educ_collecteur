@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:educ_collecteur/controllers/auth_controller.dart';
 import 'package:educ_collecteur/providers/theme_provider.dart';
@@ -19,17 +20,21 @@ class DirecteurDashboardView extends StatefulWidget {
 
 class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
   final AuthController _authController = AuthController();
-  int _selectedIndex = 0; // Index pour la BottomNavigationBar
+  int _selectedIndex = 0;
 
-  // --- MISE À JOUR DE LA LISTE DES PAGES ---
-  // On utilise maintenant les vraies pages que vous avez créées.
-  static final List<Widget> _pages = <Widget>[
-    const _AccueilDirecteurContent(), // Onglet 0: Accueil
-    const SavedReportsPage(), // Onglet 1: Rapports Enregistrés
-    const StatisticsPage(), // Onglet 2: Statistiques
-  ];
+  late final List<Widget> _pages;
 
-  // Titres correspondants pour l'AppBar
+  @override
+  void initState() {
+    super.initState();
+    // La page d'accueil reçoit maintenant une fonction pour changer l'onglet
+    _pages = <Widget>[
+      _AccueilDirecteurContent(onCardTapped: _onItemTapped),
+      const SavedReportsPage(),
+      const StatisticsPage(),
+    ];
+  }
+
   static const List<String> _pageTitles = [
     'Tableau de Bord Directeur',
     'Rapports Enregistrés',
@@ -46,54 +51,38 @@ class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _pageTitles[_selectedIndex],
-        ), // Le titre change avec la page
-        actions: [
-          // On ajoute un bouton pour ouvrir le drawer des paramètres/déconnexion
-          Builder(
-            builder:
-                (context) => IconButton(
-                  icon: const Icon(Icons.menu),
-                  onPressed: () => Scaffold.of(context).openEndDrawer(),
-                  tooltip: 'Menu',
-                ),
-          ),
-        ],
+        title: Text(_pageTitles[_selectedIndex], style: GoogleFonts.poppins()),
+        backgroundColor: Colors.indigo,
+        // En définissant un `drawer`, Flutter ajoute automatiquement
+        // l'icône de menu (hamburger) à gauche.
       ),
-      // Le Drawer est maintenant un EndDrawer pour ne pas interférer avec le bouton "retour"
-      endDrawer: _buildSettingsDrawer(context),
+      // Le drawer est maintenant à gauche
+      drawer: _buildSettingsDrawer(context),
       body: IndexedStack(index: _selectedIndex, children: _pages),
-      // --- AJOUT DE LA BOTTOMNAVIGATIONBAR ---
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
-            label: 'Accueil',
-          ),
+              icon: Icon(Icons.dashboard_outlined),
+              activeIcon: Icon(Icons.dashboard),
+              label: 'Accueil'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.folder_shared_outlined),
-            activeIcon: Icon(Icons.folder_shared),
-            label: 'Rapports',
-          ),
+              icon: Icon(Icons.folder_shared_outlined),
+              activeIcon: Icon(Icons.folder_shared),
+              label: 'Rapports'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart_outlined),
-            activeIcon: Icon(Icons.bar_chart),
-            label: 'Stats',
-          ),
+              icon: Icon(Icons.bar_chart_outlined),
+              activeIcon: Icon(Icons.bar_chart),
+              label: 'Stats'),
         ],
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        // Les couleurs s'adaptent au thème
-        selectedItemColor: Theme.of(context).colorScheme.primary,
+        selectedItemColor: Colors.indigo,
         unselectedItemColor: Colors.grey,
         showUnselectedLabels: false,
       ),
     );
   }
 
-  /// Construit un Drawer simplifié pour les paramètres et la déconnexion.
   Drawer _buildSettingsDrawer(BuildContext context) {
     return Drawer(
       child: Consumer<ThemeProvider>(
@@ -102,68 +91,44 @@ class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
             padding: EdgeInsets.zero,
             children: [
               UserAccountsDrawerHeader(
-                accountName: const Text(
-                  "Directeur Provincial",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+                accountName: Text("Directeur Provincial",
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
                 accountEmail: Text(
-                  _authController.auth.currentUser?.email ??
-                      'non.connecte@email.com',
+                    _authController.auth.currentUser?.email ??
+                        'non.connecte@email.com',
+                    style: GoogleFonts.poppins()),
+                currentAccountPicture: const CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.school, size: 40, color: Colors.indigo),
                 ),
-                currentAccountPicture: CircleAvatar(
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  child: Icon(
-                    Icons.school,
-                    size: 40,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+                decoration: const BoxDecoration(color: Colors.indigo),
               ),
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  "Options",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
+              ListTile(
+                title: Text("Options",
+                    style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600)),
               ),
-              ExpansionTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: const Text("Paramètres"),
-                children: [
-                  SwitchListTile(
-                    title: const Text("Mode Sombre"),
-                    secondary: Icon(
-                      themeProvider.themeMode == ThemeMode.dark
-                          ? Icons.dark_mode_outlined
-                          : Icons.light_mode_outlined,
-                    ),
-                    value: themeProvider.themeMode == ThemeMode.dark,
-                    onChanged: (value) {
-                      Provider.of<ThemeProvider>(
-                        context,
-                        listen: false,
-                      ).toggleTheme(value);
-                    },
-                  ),
-                ],
+              SwitchListTile(
+                title: Text("Mode Sombre", style: GoogleFonts.poppins()),
+                secondary: Icon(themeProvider.themeMode == ThemeMode.dark
+                    ? Icons.dark_mode_outlined
+                    : Icons.light_mode_outlined),
+                value: themeProvider.themeMode == ThemeMode.dark,
+                onChanged: (value) =>
+                    Provider.of<ThemeProvider>(context, listen: false)
+                        .toggleTheme(value),
               ),
               const Divider(),
               ListTile(
                 leading: const Icon(Icons.logout, color: Colors.redAccent),
-                title: const Text(
-                  'Déconnexion',
-                  style: TextStyle(color: Colors.redAccent),
-                ),
+                title: Text('Déconnexion',
+                    style: GoogleFonts.poppins(color: Colors.redAccent)),
                 onTap: () async {
                   await _authController.signOut();
-                  if (mounted) {
-                    Navigator.of(
-                      context,
-                    ).pushNamedAndRemoveUntil('/login', (route) => false);
-                  }
+                  if (mounted)
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/login', (route) => false);
                 },
               ),
             ],
@@ -174,9 +139,9 @@ class _DirecteurDashboardViewState extends State<DirecteurDashboardView> {
   }
 }
 
-/// Contenu de la page d'accueil du Directeur
 class _AccueilDirecteurContent extends StatelessWidget {
-  const _AccueilDirecteurContent();
+  final Function(int) onCardTapped;
+  const _AccueilDirecteurContent({required this.onCardTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -185,56 +150,40 @@ class _AccueilDirecteurContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- EMOJI RETIRÉ ---
           Text(
             "Bienvenue, Directeur !",
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontFamily: GoogleFonts.poppins().fontFamily),
           ),
           const SizedBox(height: 8),
           Text(
             "Supervisez et analysez les données de votre province.",
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.grey.shade600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Colors.grey.shade600,
+                fontFamily: GoogleFonts.poppins().fontFamily),
           ),
           const SizedBox(height: 24),
-
           _buildDashboardCard(
             context: context,
             icon: Icons.folder_shared_outlined,
             title: 'Consulter les Rapports',
             subtitle: 'Accédez à tous les rapports générés par les services.',
-            onTap: () {
-              // Cette carte n'est plus nécessaire car c'est un onglet
-              // Mais on peut la garder comme raccourci
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Accédez via l'onglet 'Rapports' en bas."),
-                ),
-              );
-            },
+            onTap: () => onCardTapped(1),
           ),
+          const SizedBox(height: 16),
           _buildDashboardCard(
             context: context,
             icon: Icons.bar_chart_outlined,
             title: 'Statistiques Interactives',
             subtitle: 'Visualisez les données clés sous forme de graphiques.',
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Accédez via l'onglet 'Stats' en bas."),
-                ),
-              );
-            },
+            onTap: () => onCardTapped(2),
           ),
         ],
       ),
     );
   }
 
-  /// Construit une carte cliquable pour le tableau de bord
   Widget _buildDashboardCard({
     required BuildContext context,
     required IconData icon,
@@ -245,6 +194,7 @@ class _AccueilDirecteurContent extends StatelessWidget {
     final theme = Theme.of(context);
     return Card(
       elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -261,15 +211,15 @@ class _AccueilDirecteurContent extends StatelessWidget {
                     Text(
                       title,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                          fontWeight: FontWeight.bold,
+                          fontFamily: GoogleFonts.poppins().fontFamily),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
+                          color: Colors.grey.shade600,
+                          fontFamily: GoogleFonts.poppins().fontFamily),
                     ),
                   ],
                 ),

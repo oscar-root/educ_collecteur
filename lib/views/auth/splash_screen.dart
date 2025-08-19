@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -14,8 +15,9 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _logoRotationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  late AnimationController _bubblesController;
 
-  late AnimationController _progressController;
+  final Random _random = Random();
 
   @override
   void initState() {
@@ -43,15 +45,15 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(seconds: 3),
     )..repeat();
 
-    // Progress bar rouge
-    _progressController = AnimationController(
+    // Animation des bulles
+    _bubblesController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 8),
-    )..forward();
+      duration: const Duration(seconds: 10),
+    )..repeat();
 
     _controller.forward();
 
-    // Transition vers /login
+    // Durée prolongée à 5 secondes
     Timer(const Duration(seconds: 8), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
@@ -61,7 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
   void dispose() {
     _controller.dispose();
     _logoRotationController.dispose();
-    _progressController.dispose();
+    _bubblesController.dispose();
     super.dispose();
   }
 
@@ -69,77 +71,98 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      body: Stack(
         children: [
-          // --- contenu principal ---
-          Expanded(
-            child: Center(
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      RotationTransition(
-                        turns: Tween(
-                          begin: 0.0,
-                          end: 1.0,
-                        ).animate(_logoRotationController),
-                        child: Image.asset(
-                          'assets/images/logoeduc.png',
-                          width: 120,
-                          height: 120,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'EDUC.NC H-L1',
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineMedium
-                            ?.copyWith(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                            ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Collecteur des données scolaires',
-                        style: TextStyle(
-                          color: Colors.black54,
-                          fontSize: 16,
-                          fontStyle: FontStyle.italic,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+          // --- bulles animées en arrière-plan ---
+          AnimatedBuilder(
+            animation: _bubblesController,
+            builder: (context, child) {
+              return CustomPaint(
+                painter: BubblePainter(
+                  animationValue: _bubblesController.value,
+                  random: _random,
                 ),
-              ),
-            ),
+                child: Container(),
+              );
+            },
           ),
 
-          // --- Progress bar rouge en bas ---
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: AnimatedBuilder(
-              animation: _progressController,
-              builder: (context, child) {
-                return LinearProgressIndicator(
-                  value: _progressController.value,
-                  minHeight: 6,
-                  color: Colors.red,
-                  backgroundColor: Colors.red.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                );
-              },
+          // --- contenu principal ---
+          Center(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    RotationTransition(
+                      turns: Tween(
+                        begin: 0.0,
+                        end: 1.0,
+                      ).animate(_logoRotationController),
+                      child: Image.asset(
+                        'assets/images/logoeduc.png',
+                        width: 120,
+                        height: 120,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'EDUC.NC DIPRO H-L1',
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5,
+                              ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Collecteur des données scolaires',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 16,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 32),
+                    const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
   }
+}
+
+// --- Custom Painter pour bulles rouges animées ---
+class BubblePainter extends CustomPainter {
+  final double animationValue;
+  final Random random;
+
+  BubblePainter({required this.animationValue, required this.random});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.red.withOpacity(0.2);
+
+    for (int i = 0; i < 20; i++) {
+      final dx = (size.width / 20) * i + (10 * sin(animationValue * 2 * pi));
+      final dy = size.height * (0.2 + (0.8 * ((i + animationValue) % 1)));
+
+      final radius = 10 + (5 * sin((animationValue * 2 * pi) + i));
+
+      canvas.drawCircle(Offset(dx, dy), radius.abs(), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
