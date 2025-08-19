@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart'; // Recommandé pour un style cohérent
+import 'package:google_fonts/google_fonts.dart';
 import 'package:educ_collecteur/controllers/auth_controller.dart';
 import 'package:educ_collecteur/widgets/custom_button.dart';
 import 'package:educ_collecteur/widgets/custom_text_field.dart';
@@ -57,7 +57,6 @@ class _RegisterViewState extends State<RegisterView> {
           phone: _phoneController.text.trim(),
           gender: _selectedGender!,
           role: _selectedRole!,
-          // Les champs de l'école sont envoyés comme nulls
           schoolName: null,
           codeEcole: null,
           niveauEcole: null,
@@ -77,21 +76,27 @@ class _RegisterViewState extends State<RegisterView> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
             content: Text("Utilisateur créé avec succès !"),
-            backgroundColor: Colors.green));
-        if (widget.fromAdmin) {
-          Navigator.pop(context);
-        } else {
-          Navigator.pushNamedAndRemoveUntil(
-              context, '/login', (route) => false);
-        }
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        widget.fromAdmin
+            ? Navigator.pop(context)
+            : Navigator.pushNamedAndRemoveUntil(
+                context, '/login', (_) => false);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text("Erreur : ${e.toString()}"),
-            backgroundColor: Colors.red));
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -106,142 +111,184 @@ class _RegisterViewState extends State<RegisterView> {
         widget.fromAdmin ? "Enregistrer l'Utilisateur" : "Créer mon Compte";
 
     return Scaffold(
-      appBar: AppBar(title: Text(pageTitle, style: GoogleFonts.poppins())),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildSectionCard(
-                title: "Informations Personnelles",
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFF5F7FA), Color(0xFFE4EBF5)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
                 children: [
-                  CustomTextField(
-                      controller: _fullNameController,
-                      labelText: 'Nom complet',
-                      icon: Icons.person_outline,
-                      validator: (v) => v!.isEmpty ? 'Champ requis' : null),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                      controller: _phoneController,
-                      labelText: 'Numéro de téléphone',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (v) => v!.isEmpty ? 'Numéro requis' : null),
-                  const SizedBox(height: 16),
-                  _buildDropdown(
-                      value: _selectedGender,
-                      hint: 'Genre',
-                      items: ['Masculin', 'Féminin'],
-                      onChanged: (val) =>
-                          setState(() => _selectedGender = val)),
-                ],
-              ),
-              if (!widget.fromAdmin)
-                _buildSectionCard(
-                  title: "Informations sur l'Établissement",
-                  children: [
-                    CustomTextField(
-                        controller: _schoolNameController,
-                        labelText: "Nom de l’établissement",
-                        icon: Icons.apartment_outlined,
-                        validator: (v) => !widget.fromAdmin && v!.isEmpty
-                            ? 'Champ requis'
-                            : null),
-                    const SizedBox(height: 16),
-                    CustomTextField(
-                        controller: _codeEcoleController,
-                        labelText: 'Code école',
-                        icon: Icons.pin_outlined,
-                        validator: (v) => !widget.fromAdmin && v!.isEmpty
-                            ? 'Champ requis'
-                            : null),
-                    const SizedBox(height: 16),
-                    _buildDropdown(
-                        value: _selectedNiveauEcole,
-                        hint: 'Niveau d’école',
-                        items: ['Maternel', 'Primaire', 'Secondaire'],
-                        onChanged: (val) =>
-                            setState(() => _selectedNiveauEcole = val),
-                        isRequired: !widget.fromAdmin),
-                  ],
-                ),
-              _buildSectionCard(
-                title: "Identifiants & Rôle",
-                children: [
-                  CustomTextField(
-                      controller: _emailController,
-                      labelText: 'Email',
-                      icon: Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress,
-                      validator: (v) => v == null || !v.contains('@')
-                          ? 'Email invalide'
-                          : null),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                      controller: _passwordController,
-                      labelText: 'Mot de passe',
-                      icon: Icons.lock_outline,
-                      obscureText: true,
-                      validator: (v) => v == null || v.length < 6
-                          ? '6 caractères minimum'
-                          : null),
-                  if (widget.fromAdmin) ...[
-                    const SizedBox(height: 16),
-                    _buildDropdown(
-                      value: _selectedRole,
-                      hint: 'Rôle de l\'utilisateur',
-                      items: ['chef', 'chef_service', 'directeur', 'admin'],
-                      onChanged: (val) => setState(() => _selectedRole = val),
-                      isRequired: widget.fromAdmin,
+                  Icon(
+                    Icons.app_registration,
+                    size: 80,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    pageTitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
-                  ]
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildSectionCard(
+                    title: "Informations Personnelles",
+                    children: [
+                      CustomTextField(
+                        controller: _fullNameController,
+                        labelText: 'Nom complet',
+                        icon: Icons.person_outline,
+                        validator: (v) => v!.isEmpty ? 'Champ requis' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _phoneController,
+                        labelText: 'Numéro de téléphone',
+                        icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        validator: (v) => v!.isEmpty ? 'Numéro requis' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildDropdown(
+                        value: _selectedGender,
+                        hint: 'Genre',
+                        items: ['Masculin', 'Féminin'],
+                        onChanged: (val) =>
+                            setState(() => _selectedGender = val),
+                      ),
+                    ],
+                  ),
+                  if (!widget.fromAdmin)
+                    _buildSectionCard(
+                      title: "Informations sur l'Établissement",
+                      children: [
+                        CustomTextField(
+                          controller: _schoolNameController,
+                          labelText: "Nom de l’établissement",
+                          icon: Icons.apartment_outlined,
+                          validator: (v) => !widget.fromAdmin && v!.isEmpty
+                              ? 'Champ requis'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _codeEcoleController,
+                          labelText: 'Code école',
+                          icon: Icons.pin_outlined,
+                          validator: (v) => !widget.fromAdmin && v!.isEmpty
+                              ? 'Champ requis'
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildDropdown(
+                          value: _selectedNiveauEcole,
+                          hint: 'Niveau d’école',
+                          items: ['Maternel', 'Primaire', 'Secondaire'],
+                          onChanged: (val) =>
+                              setState(() => _selectedNiveauEcole = val),
+                          isRequired: !widget.fromAdmin,
+                        ),
+                      ],
+                    ),
+                  _buildSectionCard(
+                    title: "Identifiants & Rôle",
+                    children: [
+                      CustomTextField(
+                        controller: _emailController,
+                        labelText: 'Email',
+                        icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (v) => v == null || !v.contains('@')
+                            ? 'Email invalide'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        controller: _passwordController,
+                        labelText: 'Mot de passe',
+                        icon: Icons.lock_outline,
+                        obscureText: true,
+                        validator: (v) => v == null || v.length < 6
+                            ? '6 caractères minimum'
+                            : null,
+                      ),
+                      if (widget.fromAdmin) ...[
+                        const SizedBox(height: 16),
+                        _buildDropdown(
+                          value: _selectedRole,
+                          hint: 'Rôle de l\'utilisateur',
+                          items: ['chef', 'chef_service', 'directeur', 'admin'],
+                          onChanged: (val) =>
+                              setState(() => _selectedRole = val),
+                          isRequired: widget.fromAdmin,
+                        ),
+                      ]
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  CustomButton(
+                    text:
+                        _isLoading ? 'Enregistrement en cours...' : buttonTitle,
+                    icon: Icons.person_add_alt_1,
+                    onPressed: _isLoading ? null : _handleRegister,
+                  ),
+                  const SizedBox(height: 16),
+                  if (!widget.fromAdmin)
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text(
+                        "Vous avez déjà un compte ? Se connecter",
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                    ),
                 ],
               ),
-              const SizedBox(height: 32),
-              CustomButton(
-                  text: _isLoading ? 'Enregistrement en cours...' : buttonTitle,
-                  icon: Icons.person_add_alt_1,
-                  onPressed: _isLoading ? null : _handleRegister),
-              const SizedBox(height: 20),
-              if (!widget.fromAdmin)
-                TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child:
-                        const Text("Vous avez déjà un compte ? Se connecter")),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // =========================================================================
-  // MÉTHODES MANQUANTES, MAINTENANT RESTAURÉES
-  // =========================================================================
+  // ========================================================================
+  // Widgets personnalisés
+  // ========================================================================
 
-  /// Construit une carte stylisée pour regrouper les champs du formulaire.
   Widget _buildSectionCard({
     required String title,
     required List<Widget> children,
   }) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.only(bottom: 24),
+      shadowColor: Colors.black26,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(18.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo),
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
             ),
             const Divider(height: 24),
             ...children,
@@ -251,7 +298,6 @@ class _RegisterViewState extends State<RegisterView> {
     );
   }
 
-  /// Construit un menu déroulant stylisé et avec validation.
   Widget _buildDropdown({
     required String? value,
     required String hint,
@@ -264,14 +310,15 @@ class _RegisterViewState extends State<RegisterView> {
       hint: Text(hint),
       decoration: InputDecoration(
         labelText: hint,
-        border: const OutlineInputBorder(),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding:
-            const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
       ),
       items: items
           .map((item) => DropdownMenuItem(
-              value: item,
-              child: Text(item[0].toUpperCase() + item.substring(1))))
+                value: item,
+                child: Text(item[0].toUpperCase() + item.substring(1)),
+              ))
           .toList(),
       onChanged: onChanged,
       validator: (value) => isRequired && value == null

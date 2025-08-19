@@ -7,7 +7,6 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-// --- IMPORTS DE VOTRE PROJET ---
 import 'package:educ_collecteur/models/st2_model.dart';
 import 'package:educ_collecteur/controllers/st2_controller.dart';
 import 'package:educ_collecteur/controllers/auth_controller.dart';
@@ -174,7 +173,6 @@ class _ManageFormsPageState extends State<_ManageFormsPage> {
   final TextEditingController _searchController = TextEditingController();
 
   late Future<List<ST2Model>> _formsFuture;
-
   String? _selectedSousDivision;
   String? _selectedStatus = 'Soumis';
 
@@ -201,6 +199,12 @@ class _ManageFormsPageState extends State<_ManageFormsPage> {
     _searchController.addListener(() => setState(() {}));
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _loadForms() {
     setState(() {
       _formsFuture = _st2Controller.getForms(
@@ -211,10 +215,39 @@ class _ManageFormsPageState extends State<_ManageFormsPage> {
     });
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _viewForm(ST2Model form) async {
+    await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) =>
+                ST2DetailView(form: form, userRole: "chef_service")));
+    _loadForms();
+  }
+
+  Future<void> _deleteForm(ST2Model form) async {
+    if (form.id == null) return;
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: Text(
+            'Voulez-vous vraiment supprimer le formulaire de "${form.schoolName}" ?\n\nCette action est irréversible.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annuler')),
+          FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Supprimer')),
+        ],
+      ),
+    );
+    if (confirm == true && mounted) {
+      final bool success =
+          await _st2Controller.deleteForm(docId: form.id!, context: context);
+      if (success) _loadForms();
+    }
   }
 
   @override
@@ -226,36 +259,29 @@ class _ManageFormsPageState extends State<_ManageFormsPage> {
           child: FutureBuilder<List<ST2Model>>(
             future: _formsFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting)
                 return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
+              if (snapshot.hasError)
                 return Center(
                     child: Text("Erreur: ${snapshot.error}",
                         style: const TextStyle(color: Colors.red)));
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              if (!snapshot.hasData || snapshot.data!.isEmpty)
                 return Center(
                     child: Text("Aucun formulaire ne correspond aux filtres.",
                         style: GoogleFonts.poppins()));
-              }
-
               final allForms = snapshot.data!;
               final searchQuery = _searchController.text.toLowerCase();
-
-              final filteredForms = allForms.where((form) {
-                return form.schoolName.toLowerCase().contains(searchQuery) ||
-                    form.chefEtablissementName
-                        .toLowerCase()
-                        .contains(searchQuery);
-              }).toList();
-
-              if (filteredForms.isEmpty && allForms.isNotEmpty) {
+              final filteredForms = allForms
+                  .where((form) =>
+                      form.schoolName.toLowerCase().contains(searchQuery) ||
+                      form.chefEtablissementName
+                          .toLowerCase()
+                          .contains(searchQuery))
+                  .toList();
+              if (filteredForms.isEmpty && allForms.isNotEmpty)
                 return Center(
                     child: Text("Aucun résultat pour votre recherche.",
                         style: GoogleFonts.poppins()));
-              }
-
               return RefreshIndicator(
                 onRefresh: () async => _loadForms(),
                 child: ListView.builder(
@@ -299,15 +325,31 @@ class _ManageFormsPageState extends State<_ManageFormsPage> {
             statusChip,
           ],
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: () async {
-          await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) =>
-                      ST2DetailView(form: form, userRole: "chef_service")));
-          _loadForms();
-        },
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'view') {
+              _viewForm(form);
+            } else if (value == 'delete') {
+              _deleteForm(form);
+            }
+          },
+          itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+            const PopupMenuItem<String>(
+              value: 'view',
+              child: ListTile(
+                  leading: Icon(Icons.visibility_outlined),
+                  title: Text('Visualiser')),
+            ),
+            const PopupMenuItem<String>(
+              value: 'delete',
+              child: ListTile(
+                  leading: Icon(Icons.delete_outline, color: Colors.red),
+                  title:
+                      Text('Supprimer', style: TextStyle(color: Colors.red))),
+            ),
+          ],
+        ),
+        onTap: () => _viewForm(form),
       ),
     );
   }

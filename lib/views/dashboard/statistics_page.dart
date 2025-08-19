@@ -89,10 +89,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
               _StatisticCard(
                 icon: Icons.person_outline,
                 label: "Élèves / Enseignant",
-                value:
-                    totalEnseignants > 0
-                        ? (totalEleves / totalEnseignants).toStringAsFixed(1)
-                        : "N/A",
+                value: totalEnseignants > 0
+                    ? (totalEleves / totalEnseignants).toStringAsFixed(1)
+                    : "N/A",
                 color: Colors.purple,
               ),
               _StatisticCard(

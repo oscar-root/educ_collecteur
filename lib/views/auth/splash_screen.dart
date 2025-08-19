@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -11,49 +10,52 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _controller;
-  late AnimationController _logoRotationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
-  late AnimationController _bubblesController;
+  late AnimationController _logoController;
+  late Animation<double> _logoScale;
 
-  final Random _random = Random();
+  late AnimationController _bubbleController;
+  late Animation<double> _bubbleScale;
+
+  late AnimationController _progressController;
+  int _progressPercent = 0;
 
   @override
   void initState() {
     super.initState();
 
-    // Animations logo (scale + fade)
-    _controller = AnimationController(
+    // --- Animation logo (pulsation légère) ---
+    _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _logoScale = Tween<double>(begin: 0.9, end: 1.05).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.easeInOut),
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.6,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
-
-    // Rotation du logo
-    _logoRotationController = AnimationController(
+    // --- Animation bulle (respiration) ---
+    _bubbleController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
-    )..repeat();
+    )..repeat(reverse: true);
 
-    // Animation des bulles
-    _bubblesController = AnimationController(
+    _bubbleScale = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(parent: _bubbleController, curve: Curves.easeInOut),
+    );
+
+    // --- Progression (0 → 100 %) ---
+    _progressController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 10),
-    )..repeat();
+      duration: const Duration(seconds: 8),
+    )..addListener(() {
+        setState(() {
+          _progressPercent = (_progressController.value * 100).toInt();
+        });
+      });
 
-    _controller.forward();
+    _progressController.forward();
 
-    // Durée prolongée à 5 secondes
+    // --- Aller vers /login après 8 sec ---
     Timer(const Duration(seconds: 8), () {
       Navigator.pushReplacementNamed(context, '/login');
     });
@@ -61,9 +63,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _controller.dispose();
-    _logoRotationController.dispose();
-    _bubblesController.dispose();
+    _logoController.dispose();
+    _bubbleController.dispose();
+    _progressController.dispose();
     super.dispose();
   }
 
@@ -73,96 +75,84 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // --- bulles animées en arrière-plan ---
-          AnimatedBuilder(
-            animation: _bubblesController,
-            builder: (context, child) {
-              return CustomPaint(
-                painter: BubblePainter(
-                  animationValue: _bubblesController.value,
-                  random: _random,
+          // --- Bulle bleue animée ---
+          Positioned(
+            left: -60,
+            bottom: -60,
+            child: ScaleTransition(
+              scale: _bubbleScale,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: const BoxDecoration(
+                  color: Colors.blueAccent,
+                  shape: BoxShape.circle,
                 ),
-                child: Container(),
-              );
-            },
+              ),
+            ),
           ),
 
-          // --- contenu principal ---
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
+          // --- Contenu principal ---
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ScaleTransition(
+                scale: _logoScale,
+                child: Image.asset(
+                  'assets/images/logoeduc.png',
+                  width: 120,
+                  height: 120,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'EDUC.NC H-L1',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.5,
+                    ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Collecteur des données scolaires',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 16,
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 40),
+
+              // --- Progression + % ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 40),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    RotationTransition(
-                      turns: Tween(
-                        begin: 0.0,
-                        end: 1.0,
-                      ).animate(_logoRotationController),
-                      child: Image.asset(
-                        'assets/images/logoeduc.png',
-                        width: 120,
-                        height: 120,
-                      ),
+                    LinearProgressIndicator(
+                      value: _progressController.value,
+                      minHeight: 8,
+                      color: Colors.blueAccent,
+                      backgroundColor: Colors.blueAccent.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 12),
                     Text(
-                      'EDUC.NC DIPRO H-L1',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                              ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Collecteur des données scolaires',
-                      style: TextStyle(
-                        color: Colors.black54,
-                        fontSize: 16,
-                        fontStyle: FontStyle.italic,
+                      '$_progressPercent%',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blueAccent,
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    const CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.red),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
     );
   }
-}
-
-// --- Custom Painter pour bulles rouges animées ---
-class BubblePainter extends CustomPainter {
-  final double animationValue;
-  final Random random;
-
-  BubblePainter({required this.animationValue, required this.random});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.red.withOpacity(0.2);
-
-    for (int i = 0; i < 20; i++) {
-      final dx = (size.width / 20) * i + (10 * sin(animationValue * 2 * pi));
-      final dy = size.height * (0.2 + (0.8 * ((i + animationValue) % 1)));
-
-      final radius = 10 + (5 * sin((animationValue * 2 * pi) + i));
-
-      canvas.drawCircle(Offset(dx, dy), radius.abs(), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
