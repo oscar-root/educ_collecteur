@@ -110,7 +110,7 @@ class ReportViewerPage extends StatelessWidget {
               const SizedBox(height: 16),
               _buildSummaryCards(totalEcoles, totalEleves, totalLivres),
               const SizedBox(height: 24),
-              Text("Données Détaillées",
+              Text("Données Détaillées ",
                   style: GoogleFonts.poppins(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),

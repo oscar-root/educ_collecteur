@@ -168,7 +168,8 @@ class _AccueilDirecteurContent extends StatelessWidget {
             context: context,
             icon: Icons.folder_shared_outlined,
             title: 'Consulter les Rapports',
-            subtitle: 'Accédez à tous les rapports générés par les services.',
+            subtitle:
+                'Accédez à tous les rapports générés par le service statistique et planification.',
             onTap: () => onCardTapped(1),
           ),
           const SizedBox(height: 16),

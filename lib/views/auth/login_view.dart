@@ -82,7 +82,7 @@ class _LoginViewState extends State<LoginView>
           errorMessage = 'L\'email ou le mot de passe est incorrect.';
           break;
         case 'user-disabled':
-          errorMessage = 'Ce compte utilisateur a été désactivé.';
+          errorMessage = 'Ce compte a été désactivé.';
           break;
         case 'invalid-email':
           errorMessage = 'Le format de l\'email est invalide.';

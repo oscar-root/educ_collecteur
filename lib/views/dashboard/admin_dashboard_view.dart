@@ -415,7 +415,7 @@ class _PieChartCardState extends State<_PieChartCard> {
           SizedBox(
             height: 150, // CORRIGÉ: Taille réduite
             child: widget.data.isEmpty
-                ? const Center(child: Text("Pas de données"))
+                ? const Center(child: Text("aucune donnée"))
                 : PieChart(
                     PieChartData(
                       pieTouchData: PieTouchData(

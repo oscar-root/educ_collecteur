@@ -149,9 +149,10 @@ class _ChefServiceDashboardViewState extends State<ChefServiceDashboardView> {
                     style: GoogleFonts.poppins(color: Colors.red.shade700)),
                 onTap: () async {
                   await _authController.signOut();
-                  if (mounted)
+                  if (mounted) {
                     Navigator.of(context)
                         .pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
                 },
               ),
             ],

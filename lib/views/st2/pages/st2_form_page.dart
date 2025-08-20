@@ -126,7 +126,7 @@ class _ST2FormPageState extends State<ST2FormPage> {
     'Tableaux',
     'Tables',
     'Chaises',
-    'Ordinateurs (à des fins pédagogiques)',
+    'Ordinateurs',
     'Kits scientifiques',
   ];
 

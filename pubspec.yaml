@@ -1,57 +1,57 @@
 name: educ_collecteur
 description: "A new Flutter project."
 publish_to: 'none'
-version: 0.1.0
+version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0' # Mise à jour vers une contrainte plus standard et moderne
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
+
+  # Firebase - On utilise des versions récentes qui fonctionnent bien ensemble
   firebase_core: ^2.27.0
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.15.5
-  intl: ^0.18.1
-  image_picker: ^1.1.2
   firebase_storage: ^11.7.7
-  carousel_slider: ^4.2.1 # Version mise à jour pour compatibilité
-  animate_do: ^3.3.4
-  fl_chart: ^0.68.0
-  provider: ^6.1.2 
-  pdf: ^3.10.8 # Version mise à jour pour compatibilité
-  printing: ^5.11.1 # Version mise à jour pour compatibilité
-  google_fonts: ^6.2.1 # Version mise à jour pour compatibilité
-  google_nav_bar: ^5.0.6 # Version mise à jour pour compatibilité
+
+  # PDF & Exportation
+  pdf: ^3.10.8
+  printing: ^5.11.1
   path_provider: ^2.1.3
-  open_file_plus: ^3.4.1
+  # CORRECTION: On utilise la dernière version stable et publiée
+  open_file_plus: ^3.4.1 
   url_launcher: ^6.2.6
   universal_html: ^2.2.4
- 
+
+  # UI & Utils
+  provider: ^6.1.2
+  intl: ^0.18.1
+  google_fonts: ^6.2.1
+  google_nav_bar: ^5.0.6
+  animate_do: ^3.3.4
+  fl_chart: ^0.68.0
+  image_picker: ^1.1.2
+  carousel_slider: ^4.2.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0 # Version mise à jour pour compatibilité
-  flutter_launcher_icons: ^0.13.1 # Ajouté pour personnaliser l’icône
+  flutter_lints: ^3.0.2
+  flutter_launcher_icons: ^0.13.1
 
-# Configuration de flutter_launcher_icons
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logoeduc.png" # mets ton image ici
-  min_sdk_android: 21 # requis pour Android
+  image_path: "assets/images/applogo.png"
+  min_sdk_android: 21
 
-# La section suivante est spécifique à Flutter.
 flutter:
-
-  # La ligne suivante garantit que les icônes Material Design sont disponibles.
   uses-material-design: true
-
   assets:
-    - assets/images/ # CORRIGÉ : Déclare le dossier entier, ce qui est plus propre
-    - assets/fonts/   # CORRIGÉ : Déclare le dossier entier et est correctement aligné
-
+    - assets/images/
+    - assets/fonts/
   fonts:
     - family: Poppins
       fonts:

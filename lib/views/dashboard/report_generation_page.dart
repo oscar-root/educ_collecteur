@@ -133,7 +133,7 @@ class _ReportGenerationPageState extends State<ReportGenerationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text("Rapport généré et sauvegardé avec succès !"),
+              content: Text("Rapport généré et sauvegardé avec succès!"),
               backgroundColor: Colors.green),
         );
       }

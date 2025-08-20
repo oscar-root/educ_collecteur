@@ -195,7 +195,7 @@ class _AccueilPage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            "Gérez et suivez vos collectes de données scolaires.",
+            "Gérez et suivez vos formulaires de données scolaires.",
             style:
                 GoogleFonts.poppins(fontSize: 16, color: Colors.grey.shade700),
           ),

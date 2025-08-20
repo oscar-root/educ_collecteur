@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               const SizedBox(height: 24),
               Text(
-                'EDUC.NC H-L1',
+                'EDUC.NC H-L1.',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: Colors.black,
                       fontWeight: FontWeight.bold,
